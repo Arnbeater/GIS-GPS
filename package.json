@@ -1,0 +1,37 @@
+{
+  "name": "gis-gps-converter",
+  "version": "1.0.0",
+  "description": "ETRS89 til WGS84 koordinat-konverter — Movia",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win"
+  },
+  "build": {
+    "appId": "dk.movia.gis-gps-converter",
+    "productName": "GIS GPS Converter",
+    "copyright": "Trafikselskabet Movia",
+    "files": [
+      "index.html",
+      "main.js",
+      "icon.svg",
+      "manifest.json",
+      "sw.js"
+    ],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "GIS GPS Converter"
+    }
+  },
+  "devDependencies": {
+    "electron": "^29.0.0",
+    "electron-builder": "^24.13.0"
+  }
+}

@@ -1,3 +1,6 @@
+node_modules/
+dist/
+build/
 generate-icons.html
 .DS_Store
 Thumbs.db

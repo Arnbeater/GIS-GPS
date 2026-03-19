@@ -1,0 +1,69 @@
+name: Build Windows App
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Generate icon
+        run: |
+          node -e "
+          const { createCanvas } = require('canvas');
+          " 2>$null || true
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Create icon from SVG
+        run: |
+          npm install --no-save sharp
+          node -e "
+          const sharp = require('sharp');
+          const fs = require('fs');
+          const svg = fs.readFileSync('icon.svg');
+          sharp(svg).resize(256, 256).toFile('build/icon.png', (err) => {
+            if (err) { console.log('Icon gen failed, using fallback'); process.exit(0); }
+          });
+          " 2>$null || mkdir build 2>$null || true
+
+      - name: Build installer
+        run: npm run dist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GIS-GPS-Converter-Windows
+          path: dist/*.exe
+          if-no-files-found: warn
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.exe
+          name: GIS GPS Converter ${{ github.ref_name }}
+          body: |
+            ## GIS → GPS Converter ${{ github.ref_name }}
+
+            **Windows installer** — dobbeltklik for at installere.
+
+            Opretter genvej i Start-menuen og på skrivebordet.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

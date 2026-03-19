@@ -1353,8 +1353,8 @@ function resetRoute() {
   document.getElementById('route-results-card').style.display = 'none';
 }
 
-// ── PWA service worker registration ──
-if ('serviceWorker' in navigator) {
+// ── PWA service worker (web only, not Electron) ──
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
 }
 
