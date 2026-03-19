@@ -1,0 +1,16 @@
+{
+  "name": "GIS → GPS Converter",
+  "short_name": "GIS GPS",
+  "description": "ETRS89 til WGS84 koordinat-konverter for Movia busstopper",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#6366f1",
+  "orientation": "any",
+  "lang": "da",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon.svg",     "sizes": "any",     "type": "image/svg+xml" }
+  ]
+}

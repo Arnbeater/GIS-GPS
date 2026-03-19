@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GIS → GPS Converter</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#6366f1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GIS GPS">
+<link rel="apple-touch-icon" href="/icon.svg">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #09090b;
+    --surface:   #111116;
+    --card:      #18181f;
+    --border:    #27272f;
+    --border-hi: #3f3f50;
+    --text:      #e4e4f0;
+    --text-2:    #a1a1b8;
+    --text-3:    #52526a;
+    --accent:    #6366f1;
+    --accent-hi: #818cf8;
+    --accent-bg: #1e1e38;
+    --green:     #22c55e;
+    --green-dim: #14532d;
+    --cyan:      #22d3ee;
+    --red-bg:    #1f0707;
+    --red-border:#7f1d1d;
+    --red-text:  #fca5a5;
+    --blue-bg:   #0d1526;
+    --blue-border:#1e3a5f;
+    --blue-text: #7dd3fc;
+    --radius:    14px;
+    --radius-sm: 8px;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 40px 16px 60px;
+  }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--accent-bg);
+    border: 1px solid var(--accent);
+    color: var(--accent-hi);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 999px;
+    margin-bottom: 16px;
+  }
+  h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.03em;
+    margin-bottom: 8px;
+  }
+  h1 span { color: var(--accent-hi); }
+  .subtitle {
+    color: var(--text-3);
+    font-size: 0.88rem;
+    letter-spacing: 0.02em;
+  }
+
+  /* ── Tabs ── */
+  .tabs-wrap {
+    max-width: 780px;
+    margin: 0 auto 28px;
+    padding: 0 4px;
+  }
+  .tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px;
+  }
+  .tab {
+    flex: 1;
+    padding: 9px 10px;
+    border: none;
+    background: transparent;
+    color: var(--text-3);
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 500;
+    font-family: inherit;
+    letter-spacing: 0.01em;
+    transition: color 0.15s, background 0.15s;
+    white-space: nowrap;
+  }
+  .tab.active {
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.35);
+  }
+  .tab:hover:not(.active) { color: var(--text-2); background: var(--border); }
+
+  /* ── Panels ── */
+  .panel { display: none; max-width: 780px; margin: 0 auto; }
+  .panel.active { display: block; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 16px;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: var(--border-hi); }
+
+  .card h2 {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 20px;
+  }
+  .card h2 .h2-accent { color: var(--accent-hi); font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 0.82rem; }
+
+  /* ── Form ── */
+  .row { display: flex; gap: 14px; flex-wrap: wrap; }
+  .field { display: flex; flex-direction: column; gap: 7px; flex: 1; min-width: 130px; }
+
+  label {
+    font-size: 0.73rem;
+    color: var(--text-3);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  input, select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    padding: 11px 14px;
+    font-size: 0.92rem;
+    font-family: 'JetBrains Mono', monospace;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+  }
+  input::placeholder { color: var(--text-3); font-family: 'JetBrains Mono', monospace; }
+  select { font-family: 'Inter', sans-serif; }
+  select option { background: var(--card); }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    border: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.01em;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 1px 6px rgba(99,102,241,0.3);
+  }
+  .btn-primary:hover { background: var(--accent-hi); box-shadow: 0 2px 12px rgba(99,102,241,0.45); transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-3);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { background: var(--border); color: var(--text-2); }
+
+  .btn-row { display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap; align-items: center; }
+
+  /* ── Results ── */
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .result-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    transition: border-color 0.15s;
+  }
+  .result-item:hover { border-color: var(--border-hi); }
+  .result-item .rlabel {
+    font-size: 0.68rem;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    font-weight: 600;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .result-item .rval {
+    font-size: 0.9rem;
+    color: var(--cyan);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    word-break: break-all;
+    line-height: 1.4;
+  }
+
+  .copy-btn {
+    background: none;
+    border: none;
+    color: var(--text-3);
+    cursor: pointer;
+    font-size: 0.72rem;
+    padding: 2px 5px;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+    line-height: 1;
+  }
+  .copy-btn:hover { color: var(--cyan); background: var(--border); }
+
+  /* ── Utility ── */
+  .error {
+    background: var(--red-bg);
+    border: 1px solid var(--red-border);
+    color: var(--red-text);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    font-size: 0.83rem;
+    margin-top: 14px;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .info-box {
+    background: var(--blue-bg);
+    border: 1px solid var(--blue-border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    font-size: 0.82rem;
+    color: var(--blue-text);
+    margin-top: 14px;
+    line-height: 1.65;
+  }
+
+  .zone-preview {
+    font-size: 0.78rem;
+    color: var(--text-3);
+    margin-top: 8px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+  .swap-btn { display: flex; justify-content: center; margin: 10px 0; }
+  .swap-btn button {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-3);
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .swap-btn button:hover { background: var(--accent-bg); border-color: var(--accent); color: var(--accent-hi); transform: rotate(180deg); }
+
+  /* ── Drop zone ── */
+  .drop-zone-inner {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 52px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .drop-zone-inner:hover {
+    border-color: var(--accent);
+    background: var(--accent-bg);
+  }
+  .drop-zone-icon { font-size: 2.8rem; margin-bottom: 12px; line-height: 1; }
+  .drop-zone-title { color: var(--text); font-size: 1rem; font-weight: 600; margin-bottom: 6px; }
+  .drop-zone-sub { color: var(--text-3); font-size: 0.8rem; line-height: 1.5; }
+
+  /* ── Tables ── */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
+  .data-table thead tr { background: #0f0f14; }
+  .data-table th { padding: 8px 12px; color: var(--text-3); border-bottom: 1px solid var(--border); text-align: left; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; font-family: 'Inter', sans-serif; }
+  .data-table td { padding: 6px 12px; border-bottom: 1px solid #111118; color: var(--text-2); }
+  .data-table tbody tr:last-child td { border-bottom: none; }
+  .data-table tbody tr:hover td { background: #111118; }
+  .td-green { color: #86efac !important; }
+  .td-dim   { color: var(--text-3) !important; }
+
+  /* ── Summary numbers ── */
+  .summary-row { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+  .summary-big { font-size: 2rem; font-weight: 700; color: var(--green); line-height: 1; }
+  .summary-label { font-size: 0.82rem; color: var(--text-3); }
+  .summary-err { font-size: 0.82rem; color: var(--red-text); }
+
+  /* ── Media ── */
+  @media (max-width: 600px) {
+    body { padding: 24px 12px 48px; }
+    h1 { font-size: 1.5rem; }
+    .tabs { flex-wrap: wrap; }
+    .tab { flex: 0 0 calc(33.33% - 4px); font-size: 0.72rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-badge">Movia · ETRS89 → WGS84</div>
+  <h1>GIS <span>→</span> GPS</h1>
+  <p class="subtitle">UTM &nbsp;·&nbsp; DMS &nbsp;·&nbsp; DDM &nbsp;·&nbsp; Decimal Degrees &nbsp;·&nbsp; WGS84</p>
+</div>
+
+<div class="tabs-wrap">
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('utm', this)">UTM ↔ GPS</button>
+  <button class="tab" onclick="switchTab('gis', this)">GIS → GPS</button>
+  <button class="tab" onclick="switchTab('fmt', this)">Formater</button>
+  <button class="tab" onclick="switchTab('dms', this)">DMS Parser</button>
+  <button class="tab" onclick="switchTab('batch', this)">CSV Import</button>
+  <button class="tab" onclick="switchTab('route', this)">Rute kort</button>
+</div>
+</div>
+
+<!-- ===== TAB: GIS → GPS (Denmark ETRS89) ===== -->
+<div class="panel" id="panel-gis">
+  <div class="card">
+    <h2>GIS → GPS &nbsp;<span class="h2-accent">ETRS89 · Danmark / Sjælland</span></h2>
+    <div class="field">
+      <label>Paste GIS coordinates (Northing and Easting — any separator)</label>
+      <input type="text" id="gis-input" placeholder="6172229.63;717965.34" oninput="convertGis()">
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="clearGis()">Clear</button>
+    </div>
+    <div id="gis-result"></div>
+  </div>
+  <div class="info-box">
+    Paste the two numbers from columns E and F — separated by space, semicolon, comma, or tab. Northing and Easting are auto-detected by value size.
+  </div>
+</div>
+
+<!-- ===== TAB: UTM ↔ GPS ===== -->
+<div class="panel active" id="panel-utm">
+  <div class="card">
+    <h2>UTM → WGS84 (GPS)</h2>
+    <div class="row">
+      <div class="field" style="max-width:80px">
+        <label>Zone #</label>
+        <input type="number" id="utm-zone" min="1" max="60" placeholder="18" value="">
+      </div>
+      <div class="field" style="max-width:80px">
+        <label>Band</label>
+        <select id="utm-band">
+          <option value="N">N (North)</option>
+          <option value="S">S (South)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Easting (m)</label>
+        <input type="number" id="utm-easting" placeholder="500000" step="0.001">
+      </div>
+      <div class="field">
+        <label>Northing (m)</label>
+        <input type="number" id="utm-northing" placeholder="4649776" step="0.001">
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="utmToGps()">Convert →</button>
+      <button class="btn btn-ghost" onclick="clearUtm()">Clear</button>
+    </div>
+    <div id="utm-result"></div>
+  </div>
+
+  <div class="card">
+    <h2>WGS84 (GPS) → UTM</h2>
+    <div class="row">
+      <div class="field">
+        <label>Latitude (°)</label>
+        <input type="number" id="gps-lat" placeholder="41.998" step="0.000001">
+      </div>
+      <div class="field">
+        <label>Longitude (°)</label>
+        <input type="number" id="gps-lon" placeholder="-75.345" step="0.000001">
+      </div>
+    </div>
+    <p class="zone-preview" id="zone-hint">Enter coordinates to auto-detect UTM zone.</p>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="gpsToUtm()">Convert →</button>
+      <button class="btn btn-ghost" onclick="clearGps()">Clear</button>
+    </div>
+    <div id="gps-result"></div>
+  </div>
+
+  <div class="info-box">
+    <strong>Note:</strong> UTM uses the WGS84 ellipsoid (same as GPS/Google Maps). Zone bands C–M = Southern hemisphere, N–X = Northern hemisphere. Enter hemisphere as N or S if unsure of band letter.
+  </div>
+</div>
+
+<!-- ===== TAB: FORMAT CONVERT ===== -->
+<div class="panel" id="panel-fmt">
+  <div class="card">
+    <h2>Coordinate Format Converter</h2>
+    <div class="row">
+      <div class="field">
+        <label>Latitude</label>
+        <input type="number" id="fmt-lat" placeholder="41.99823" step="0.000001">
+      </div>
+      <div class="field">
+        <label>Longitude</label>
+        <input type="number" id="fmt-lon" placeholder="-75.34512" step="0.000001">
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="convertFormats()">Convert All Formats</button>
+      <button class="btn btn-ghost" onclick="clearFmt()">Clear</button>
+    </div>
+    <div id="fmt-result"></div>
+  </div>
+</div>
+
+<!-- ===== TAB: DMS PARSER ===== -->
+<div class="panel" id="panel-dms">
+  <div class="card">
+    <h2>DMS / DDM → Decimal Degrees</h2>
+    <div class="field" style="margin-bottom:12px">
+      <label>Paste DMS string (latitude)</label>
+      <input type="text" id="dms-lat-input" placeholder='e.g.  41° 59&apos; 53.6" N  or  41 59 53.6N'>
+    </div>
+    <div class="field" style="margin-bottom:12px">
+      <label>Paste DMS string (longitude)</label>
+      <input type="text" id="dms-lon-input" placeholder='e.g.  75° 20&apos; 42.4" W  or  -75 20 42.4'>
+    </div>
+    <div class="field" style="margin-bottom:12px">
+      <label>— or — paste full coordinate pair</label>
+      <input type="text" id="dms-pair-input" placeholder='41° 59&apos; 53.6" N, 75° 20&apos; 42.4" W'>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="parseDms()">Parse →</button>
+      <button class="btn btn-ghost" onclick="clearDms()">Clear</button>
+    </div>
+    <div id="dms-result"></div>
+  </div>
+</div>
+
+<!-- ===== TAB: CSV IMPORT ===== -->
+<div class="panel" id="panel-batch">
+
+  <!-- Drop zone (always visible until file is loaded) -->
+  <div class="card" id="step1-card">
+    <h2>Drop your CSV</h2>
+    <div id="drop-zone" class="drop-zone-inner"
+      onclick="document.getElementById('csv-file-input').click()"
+      ondragover="dzOver(event)" ondragleave="dzLeave(event)" ondrop="dzDrop(event)">
+      <div class="drop-zone-icon">📂</div>
+      <div class="drop-zone-title">Drop CSV her eller klik for at vælge</div>
+      <div class="drop-zone-sub">Kolonne E = Northing &nbsp;·&nbsp; Kolonne F = Easting &nbsp;·&nbsp; ETRS89 / Danmark</div>
+    </div>
+    <input type="file" id="csv-file-input" accept=".csv,.txt,.tsv" style="display:none" onchange="loadCsvFile(event)">
+    <div class="info-box" style="margin-top:16px">
+      Expected columns: &nbsp;<strong>A</strong> Line &nbsp;·&nbsp; <strong>B</strong> Stop No. &nbsp;·&nbsp; <strong>C</strong> Stop Name &nbsp;·&nbsp; <strong>D</strong> Road &nbsp;·&nbsp; <strong>E</strong> Northing &nbsp;·&nbsp; <strong>F</strong> Easting<br>
+      Output: A · B · C · D · latitude · longitude
+    </div>
+  </div>
+
+  <!-- Results (shown after conversion) -->
+  <div id="step3-card" style="display:none">
+    <div class="card">
+      <h2>Resultater &nbsp;<span id="s3-filename" class="h2-accent"></span></h2>
+      <div id="convert-summary" style="margin-bottom:12px"></div>
+      <div class="btn-row" style="margin-top:0">
+        <button class="btn btn-primary" onclick="downloadCsvResults()">⬇ Download CSV</button>
+        <button class="btn btn-ghost" onclick="resetCsv()">Convert another file</button>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div id="result-table-wrap" style="overflow-x:auto;max-height:500px;overflow-y:auto"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== TAB: RUTE KORT ===== -->
+<div class="panel" id="panel-route">
+
+  <div class="card" id="route-drop-card">
+    <h2>Drop din GPS CSV</h2>
+    <div id="route-drop-zone" class="drop-zone-inner"
+      onclick="document.getElementById('route-file-input').click()"
+      ondragover="dzOver(event)" ondragleave="routeDzLeave(event)" ondrop="routeDzDrop(event)">
+      <div class="drop-zone-icon">🗺️</div>
+      <div class="drop-zone-title">Drop den konverterede GPS CSV her</div>
+      <div class="drop-zone-sub">Linje · StopNr · StopNavn · VejNavn · latitude · longitude</div>
+    </div>
+    <input type="file" id="route-file-input" accept=".csv,.txt" style="display:none" onchange="loadRouteFile(event)">
+    <div class="info-box" style="margin-top:16px">
+      Brug den CSV som <strong>CSV Import</strong> tabben producerer.<br>
+      Du får et <strong>KML-fil</strong> til Google My Maps (alle stop) + et <strong>Google Maps link</strong> med ruten.
+    </div>
+  </div>
+
+  <div id="route-results-card" style="display:none">
+    <div class="card">
+      <h2>Rute &nbsp;<span id="route-info" class="h2-accent"></span></h2>
+
+      <div style="margin-bottom:16px;font-size:0.85rem;color:var(--text-3)">
+        <strong style="color:var(--text-2)">KML til Google My Maps</strong> — importér filen på
+        <a href="https://mymaps.google.com" target="_blank" style="color:var(--accent-hi)">mymaps.google.com</a>
+        for at se alle stop på kortet med navne og en rutelinje.
+      </div>
+
+      <div class="btn-row" style="margin-top:0;flex-wrap:wrap;gap:8px">
+        <button class="btn btn-primary" onclick="downloadRouteKml()">⬇ Download KML</button>
+        <button class="btn btn-primary" style="background:#16a34a" onclick="openGoogleMapsRoute()">🗺 Åbn i Google Maps</button>
+        <button class="btn btn-ghost" onclick="resetRoute()">Ny fil</button>
+      </div>
+
+      <div id="route-gmaps-note" style="margin-top:12px;font-size:0.8rem;color:var(--text-3)"></div>
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden">
+      <div id="route-stop-table" style="overflow-x:auto;max-height:500px;overflow-y:auto"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ──────────────────────────────────────────────
+// WGS84 constants
+const a  = 6378137.0;
+const f  = 1 / 298.257223563;
+const b  = a * (1 - f);
+const e2 = 2 * f - f * f;
+const ep2 = e2 / (1 - e2);
+const k0 = 0.9996;
+
+function deg2rad(d) { return d * Math.PI / 180; }
+function rad2deg(r) { return r * 180 / Math.PI; }
+
+// ──────────────────────────────────────────────
+// UTM → WGS84
+function utmToLatLon(zone, isNorth, easting, northing) {
+  const x = easting - 500000;
+  let y = isNorth ? northing : northing - 10000000;
+
+  const lon0 = deg2rad((zone - 1) * 6 - 180 + 3);
+
+  const M = y / k0;
+  const mu = M / (a * (1 - e2/4 - 3*e2*e2/64 - 5*e2*e2*e2/256));
+
+  const e1 = (1 - Math.sqrt(1 - e2)) / (1 + Math.sqrt(1 - e2));
+  const phi1 = mu
+    + (3*e1/2 - 27*e1*e1*e1/32) * Math.sin(2*mu)
+    + (21*e1*e1/16 - 55*e1*e1*e1*e1/32) * Math.sin(4*mu)
+    + (151*e1*e1*e1/96) * Math.sin(6*mu)
+    + (1097*e1*e1*e1*e1/512) * Math.sin(8*mu);
+
+  const N1 = a / Math.sqrt(1 - e2 * Math.sin(phi1)**2);
+  const T1 = Math.tan(phi1) ** 2;
+  const C1 = ep2 * Math.cos(phi1) ** 2;
+  const R1 = a * (1 - e2) / Math.pow(1 - e2 * Math.sin(phi1)**2, 1.5);
+  const D  = x / (N1 * k0);
+
+  const lat = phi1
+    - (N1 * Math.tan(phi1) / R1)
+    * (D*D/2
+      - (5 + 3*T1 + 10*C1 - 4*C1*C1 - 9*ep2) * D*D*D*D/24
+      + (61 + 90*T1 + 298*C1 + 45*T1*T1 - 252*ep2 - 3*C1*C1) * D*D*D*D*D*D/720);
+
+  const lon = lon0
+    + (D
+      - (1 + 2*T1 + C1) * D*D*D/6
+      + (5 - 2*C1 + 28*T1 - 3*C1*C1 + 8*ep2 + 24*T1*T1) * D*D*D*D*D/120)
+    / Math.cos(phi1);
+
+  return { lat: rad2deg(lat), lon: rad2deg(lon) };
+}
+
+// ──────────────────────────────────────────────
+// WGS84 → UTM
+function latLonToUtm(lat, lon) {
+  const phi = deg2rad(lat);
+  const lam = deg2rad(lon);
+
+  const zone = Math.floor((lon + 180) / 6) + 1;
+  const lam0 = deg2rad((zone - 1) * 6 - 180 + 3);
+
+  const N = a / Math.sqrt(1 - e2 * Math.sin(phi)**2);
+  const T = Math.tan(phi) ** 2;
+  const C = ep2 * Math.cos(phi) ** 2;
+  const A = Math.cos(phi) * (lam - lam0);
+
+  const M = a * (
+    (1 - e2/4 - 3*e2**2/64 - 5*e2**3/256) * phi
+    - (3*e2/8 + 3*e2**2/32 + 45*e2**3/1024) * Math.sin(2*phi)
+    + (15*e2**2/256 + 45*e2**3/1024) * Math.sin(4*phi)
+    - (35*e2**3/3072) * Math.sin(6*phi)
+  );
+
+  const easting = k0 * N * (
+    A
+    + (1 - T + C) * A**3/6
+    + (5 - 18*T + T**2 + 72*C - 58*ep2) * A**5/120
+  ) + 500000;
+
+  const northingRaw = k0 * (M + N * Math.tan(phi) * (
+    A**2/2
+    + (5 - T + 9*C + 4*C**2) * A**4/24
+    + (61 - 58*T + T**2 + 600*C - 330*ep2) * A**6/720
+  ));
+
+  const isNorth = lat >= 0;
+  const northing = isNorth ? northingRaw : northingRaw + 10000000;
+
+  return { zone, hemisphere: isNorth ? 'N' : 'S', easting, northing };
+}
+
+// ──────────────────────────────────────────────
+// Format helpers
+function ddToDms(dd, isLat) {
+  const abs = Math.abs(dd);
+  const deg = Math.floor(abs);
+  const minF = (abs - deg) * 60;
+  const min = Math.floor(minF);
+  const sec = ((minF - min) * 60).toFixed(4);
+  const dir = isLat ? (dd >= 0 ? 'N' : 'S') : (dd >= 0 ? 'E' : 'W');
+  return `${deg}° ${min}' ${sec}" ${dir}`;
+}
+
+function ddToDdm(dd, isLat) {
+  const abs = Math.abs(dd);
+  const deg = Math.floor(abs);
+  const min = ((abs - deg) * 60).toFixed(6);
+  const dir = isLat ? (dd >= 0 ? 'N' : 'S') : (dd >= 0 ? 'E' : 'W');
+  return `${deg}° ${min}' ${dir}`;
+}
+
+function parseDmsStr(str) {
+  str = str.trim().replace(/[°'"]/g, ' ').replace(/\s+/g, ' ').trim();
+  const dirMatch = str.match(/([NSEW])$/i) || str.match(/^([NSEW])/i);
+  let sign = 1;
+  if (dirMatch) {
+    const d = dirMatch[1].toUpperCase();
+    if (d === 'S' || d === 'W') sign = -1;
+    str = str.replace(/[NSEW]/gi, '').trim();
+  }
+  const parts = str.split(/\s+/).map(Number);
+  if (parts.some(isNaN)) return null;
+  let dd = 0;
+  if (parts.length >= 1) dd += parts[0];
+  if (parts.length >= 2) dd += parts[1] / 60;
+  if (parts.length >= 3) dd += parts[2] / 3600;
+  if (parts[0] < 0) { sign = -1; dd = Math.abs(dd); }
+  return sign * dd;
+}
+
+// ──────────────────────────────────────────────
+// Result renderer
+function makeResults(items) {
+  return `<div class="result-grid">${items.map(({label, val}) => `
+    <div class="result-item">
+      <div class="rlabel">${label} <button class="copy-btn" onclick="copyText('${escHtml(val)}',this)" title="Copy">⧉</button></div>
+      <div class="rval">${escHtml(val)}</div>
+    </div>`).join('')}</div>`;
+}
+
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+function showError(id, msg) {
+  document.getElementById(id).innerHTML = `<div class="error">⚠ ${msg}</div>`;
+}
+
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    const old = btn.textContent;
+    btn.textContent = '✓';
+    setTimeout(() => btn.textContent = old, 1200);
+  });
+}
+
+// ──────────────────────────────────────────────
+// Tab switching
+function switchTab(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ──────────────────────────────────────────────
+// UTM → GPS
+function utmToGps() {
+  const zone = parseInt(document.getElementById('utm-zone').value);
+  const hemi = document.getElementById('utm-band').value;
+  const E    = parseFloat(document.getElementById('utm-easting').value);
+  const N    = parseFloat(document.getElementById('utm-northing').value);
+
+  if (!zone || zone < 1 || zone > 60) return showError('utm-result', 'Zone must be 1–60.');
+  if (isNaN(E) || isNaN(N)) return showError('utm-result', 'Enter valid Easting and Northing values.');
+  if (E < 100000 || E > 900000) return showError('utm-result', 'Easting should be between 100,000 and 900,000 m.');
+
+  const isNorth = hemi === 'N';
+  try {
+    const { lat, lon } = utmToLatLon(zone, isNorth, E, N);
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180)
+      return showError('utm-result', 'Result out of valid range — check zone/hemisphere.');
+
+    document.getElementById('utm-result').innerHTML = makeResults([
+      { label: 'Latitude (DD)',  val: lat.toFixed(8) },
+      { label: 'Longitude (DD)', val: lon.toFixed(8) },
+      { label: 'Lat DMS',  val: ddToDms(lat, true) },
+      { label: 'Lon DMS',  val: ddToDms(lon, false) },
+      { label: 'Lat DDM',  val: ddToDdm(lat, true) },
+      { label: 'Lon DDM',  val: ddToDdm(lon, false) },
+      { label: 'Google Maps Link', val: `${lat.toFixed(6)},${lon.toFixed(6)}` },
+    ]);
+  } catch(e) {
+    showError('utm-result', 'Conversion failed: ' + e.message);
+  }
+}
+
+function clearUtm() {
+  ['utm-zone','utm-easting','utm-northing'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('utm-result').innerHTML = '';
+}
+
+// ──────────────────────────────────────────────
+// GPS → UTM
+document.getElementById('gps-lat').addEventListener('input', updateZoneHint);
+document.getElementById('gps-lon').addEventListener('input', updateZoneHint);
+
+function updateZoneHint() {
+  const lat = parseFloat(document.getElementById('gps-lat').value);
+  const lon = parseFloat(document.getElementById('gps-lon').value);
+  const hint = document.getElementById('zone-hint');
+  if (!isNaN(lat) && !isNaN(lon) && lat >= -80 && lat <= 84 && lon >= -180 && lon <= 180) {
+    const zone = Math.floor((lon + 180) / 6) + 1;
+    const hemi = lat >= 0 ? 'N' : 'S';
+    hint.textContent = `→ Auto-detected Zone: ${zone}${hemi}`;
+  } else {
+    hint.textContent = 'Enter coordinates to auto-detect UTM zone.';
+  }
+}
+
+function gpsToUtm() {
+  const lat = parseFloat(document.getElementById('gps-lat').value);
+  const lon = parseFloat(document.getElementById('gps-lon').value);
+  if (isNaN(lat) || isNaN(lon)) return showError('gps-result', 'Enter valid Latitude and Longitude.');
+  if (lat < -80 || lat > 84) return showError('gps-result', 'UTM is only defined for latitudes −80° to +84°. Use UPS for polar regions.');
+  if (lon < -180 || lon > 180) return showError('gps-result', 'Longitude must be −180 to 180.');
+
+  try {
+    const { zone, hemisphere, easting, northing } = latLonToUtm(lat, lon);
+    document.getElementById('gps-result').innerHTML = makeResults([
+      { label: 'UTM Zone',  val: `${zone}${hemisphere}` },
+      { label: 'Easting',   val: easting.toFixed(3) + ' m' },
+      { label: 'Northing',  val: northing.toFixed(3) + ' m' },
+      { label: 'Full UTM',  val: `${zone}${hemisphere} ${easting.toFixed(1)}E ${northing.toFixed(1)}N` },
+      { label: 'Lat DMS',   val: ddToDms(lat, true) },
+      { label: 'Lon DMS',   val: ddToDms(lon, false) },
+    ]);
+  } catch(e) {
+    showError('gps-result', 'Conversion failed: ' + e.message);
+  }
+}
+
+function clearGps() {
+  ['gps-lat','gps-lon'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('gps-result').innerHTML = '';
+  document.getElementById('zone-hint').textContent = 'Enter coordinates to auto-detect UTM zone.';
+}
+
+// ──────────────────────────────────────────────
+// GIS → GPS (Denmark ETRS89 single point)
+function convertGis() {
+  const raw = document.getElementById('gis-input').value.trim();
+  if (!raw) { document.getElementById('gis-result').innerHTML = ''; return; }
+
+  // Split on any whitespace, semicolon, comma, or tab
+  const parts = raw.split(/[\s;,\t]+/).map(s => parseFloat(s.replace(/,/g,'.'))).filter(n => !isNaN(n));
+  if (parts.length < 2) return showError('gis-result', 'Paste two numbers — Northing and Easting.');
+
+  // Auto-detect which is northing (~6M) and which is easting (~700k)
+  let N, E;
+  if (parts[0] > parts[1]) { N = parts[0]; E = parts[1]; }
+  else                      { N = parts[1]; E = parts[0]; }
+
+  if (N < 5900000 || N > 6700000) return showError('gis-result', `Northing ${N.toFixed(0)} looks wrong — expected ~6 000 000–6 600 000 for Denmark.`);
+  if (E < 300000  || E > 1000000) return showError('gis-result', `Easting ${E.toFixed(0)} looks wrong — expected ~400 000–900 000 for Denmark.`);
+
+  try {
+    const r = dkAutoConvert(E, N);
+    document.getElementById('gis-result').innerHTML = makeResults([
+      { label: 'Latitude',      val: r.lat.toFixed(6) },
+      { label: 'Longitude',     val: r.lon.toFixed(6) },
+      { label: 'Lat · Lon',     val: `${r.lat.toFixed(6)}, ${r.lon.toFixed(6)}` },
+      { label: 'Lat DMS',       val: ddToDms(r.lat, true) },
+      { label: 'Lon DMS',       val: ddToDms(r.lon, false) },
+      { label: 'Zone detected', val: `UTM ${r.zone}N (ETRS89)` },
+    ]);
+  } catch(e) {
+    showError('gis-result', 'Conversion failed: ' + e.message);
+  }
+}
+
+function clearGis() {
+  document.getElementById('gis-input').value = '';
+  document.getElementById('gis-result').innerHTML = '';
+}
+
+// ──────────────────────────────────────────────
+// Format converter
+function convertFormats() {
+  const lat = parseFloat(document.getElementById('fmt-lat').value);
+  const lon = parseFloat(document.getElementById('fmt-lon').value);
+  if (isNaN(lat) || isNaN(lon)) return showError('fmt-result', 'Enter valid Latitude and Longitude in Decimal Degrees.');
+  if (lat < -90 || lat > 90) return showError('fmt-result', 'Latitude must be −90 to 90.');
+  if (lon < -180 || lon > 180) return showError('fmt-result', 'Longitude must be −180 to 180.');
+
+  let utmStr = '—';
+  try {
+    if (lat >= -80 && lat <= 84) {
+      const u = latLonToUtm(lat, lon);
+      utmStr = `${u.zone}${u.hemisphere} ${u.easting.toFixed(1)}E ${u.northing.toFixed(1)}N`;
+    }
+  } catch(_) {}
+
+  document.getElementById('fmt-result').innerHTML = makeResults([
+    { label: 'Decimal Degrees (DD)', val: `${lat.toFixed(8)}, ${lon.toFixed(8)}` },
+    { label: 'Lat DMS', val: ddToDms(lat, true) },
+    { label: 'Lon DMS', val: ddToDms(lon, false) },
+    { label: 'Lat DDM', val: ddToDdm(lat, true) },
+    { label: 'Lon DDM', val: ddToDdm(lon, false) },
+    { label: 'UTM',     val: utmStr },
+    { label: 'Google Maps', val: `${lat.toFixed(6)},${lon.toFixed(6)}` },
+    { label: 'ISO 6709', val: `${lat >= 0 ? '+' : ''}${lat.toFixed(6)}${lon >= 0 ? '+' : ''}${lon.toFixed(6)}/` },
+  ]);
+}
+
+function clearFmt() {
+  ['fmt-lat','fmt-lon'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fmt-result').innerHTML = '';
+}
+
+// ──────────────────────────────────────────────
+// DMS parser
+function parseDms() {
+  const pairInput = document.getElementById('dms-pair-input').value.trim();
+  let lat = null, lon = null;
+
+  if (pairInput) {
+    // Try split on comma
+    const parts = pairInput.split(',');
+    if (parts.length === 2) {
+      lat = parseDmsStr(parts[0]);
+      lon = parseDmsStr(parts[1]);
+    }
+  }
+
+  if (lat === null) lat = parseDmsStr(document.getElementById('dms-lat-input').value);
+  if (lon === null) lon = parseDmsStr(document.getElementById('dms-lon-input').value);
+
+  if (lat === null || lon === null || isNaN(lat) || isNaN(lon))
+    return showError('dms-result', 'Could not parse the coordinate strings. Try format: 41 59 53.6 N');
+
+  document.getElementById('dms-result').innerHTML = makeResults([
+    { label: 'Latitude DD',  val: lat.toFixed(8) },
+    { label: 'Longitude DD', val: lon.toFixed(8) },
+    { label: 'Lat DMS',  val: ddToDms(lat, true) },
+    { label: 'Lon DMS',  val: ddToDms(lon, false) },
+    { label: 'Lat DDM',  val: ddToDdm(lat, true) },
+    { label: 'Lon DDM',  val: ddToDdm(lon, false) },
+    { label: 'Google Maps', val: `${lat.toFixed(6)},${lon.toFixed(6)}` },
+  ]);
+}
+
+function clearDms() {
+  ['dms-lat-input','dms-lon-input','dms-pair-input'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('dms-result').innerHTML = '';
+}
+
+// ──────────────────────────────────────────────
+// Batch
+
+// ──────────────────────────────────────────────
+// General Transverse Mercator → WGS84
+// Works for any single-zone TM: SWEREF99TM, ETRS89, national grids, UTM, custom
+function tmToLatLon(cm_deg, scale, fe, fn, easting, northing) {
+  const x = easting  - fe;
+  const y = northing - fn;
+  const lon0 = deg2rad(cm_deg);
+
+  const M  = y / scale;
+  const mu = M / (a * (1 - e2/4 - 3*e2*e2/64 - 5*e2*e2*e2/256));
+
+  const e1   = (1 - Math.sqrt(1-e2)) / (1 + Math.sqrt(1-e2));
+  const phi1 = mu
+    + (3*e1/2 - 27*e1**3/32)       * Math.sin(2*mu)
+    + (21*e1**2/16 - 55*e1**4/32)  * Math.sin(4*mu)
+    + (151*e1**3/96)               * Math.sin(6*mu)
+    + (1097*e1**4/512)             * Math.sin(8*mu);
+
+  const N1 = a / Math.sqrt(1 - e2*Math.sin(phi1)**2);
+  const T1 = Math.tan(phi1)**2;
+  const C1 = ep2*Math.cos(phi1)**2;
+  const R1 = a*(1-e2) / Math.pow(1 - e2*Math.sin(phi1)**2, 1.5);
+  const D  = x / (N1*scale);
+
+  const lat = phi1
+    - (N1*Math.tan(phi1)/R1)
+    * ( D**2/2
+      - (5+3*T1+10*C1-4*C1**2-9*ep2)               * D**4/24
+      + (61+90*T1+298*C1+45*T1**2-252*ep2-3*C1**2)  * D**6/720 );
+
+  const lon = lon0
+    + ( D - (1+2*T1+C1)*D**3/6
+          + (5-2*C1+28*T1-3*C1**2+8*ep2+24*T1**2)*D**5/120 )
+    / Math.cos(phi1);
+
+  return { lat: rad2deg(lat), lon: rad2deg(lon) };
+}
+
+// Projection presets
+// Zealand + surrounding islands bounding box
+const DK_BBOX = { minLat:54.9, maxLat:56.2, minLon:10.8, maxLon:12.8 };
+
+function inDenmark(lat, lon) {
+  return lat >= DK_BBOX.minLat && lat <= DK_BBOX.maxLat
+      && lon >= DK_BBOX.minLon && lon <= DK_BBOX.maxLon;
+}
+
+function dkAutoConvert(E, N) {
+  // Try zone 32 first (most common), then 33
+  for (const cm of [9, 15]) {
+    try {
+      const r = tmToLatLon(cm, 0.9996, 500000, 0, E, N);
+      if (inDenmark(r.lat, r.lon)) return { ...r, zone: cm === 9 ? 32 : 33 };
+    } catch(_) {}
+  }
+  // Neither fits Denmark — return best guess (zone 32) with a flag
+  const r = tmToLatLon(9, 0.9996, 500000, 0, E, N);
+  return { ...r, zone: 32, outsideDK: true };
+}
+
+
+
+// ──────────────────────────────────────────────
+// CSV batch state
+let csvData = [], csvFilename = '', csvDelim = ',';
+let _csvResults = [];
+
+// Drag-and-drop
+function dzOver(e)  {
+  e.preventDefault();
+  e.currentTarget.style.borderColor = 'var(--accent)';
+  e.currentTarget.style.background  = 'var(--accent-bg)';
+}
+function dzLeave(e) {
+  const el = (e && e.currentTarget) || document.getElementById('drop-zone');
+  el.style.borderColor = '';
+  el.style.background  = '';
+}
+function dzDrop(e)  {
+  e.preventDefault(); dzLeave(e);
+  const f = e.dataTransfer.files[0];
+  if (f) processFile(f);
+}
+function loadCsvFile(e) { if (e.target.files[0]) processFile(e.target.files[0]); }
+
+// CP-865 (Danish/Norwegian DOS) → Unicode mapping for bytes 0x80–0xFF
+const CP865 = [
+  0xC7,0xFC,0xE9,0xE2,0xE4,0xE0,0xE5,0xE7,0xEA,0xEB,0xE8,0xEF,0xEE,0xEC,0xC4,0xC5,
+  0xC9,0xE6,0xC6,0xF4,0xF6,0xF2,0xFB,0xF9,0xFF,0xD6,0xDC,0xF8,0xA3,0xD8,0x20A7,0x192,
+  0xE1,0xED,0xF3,0xFA,0xF1,0xD1,0xAA,0xBA,0xBF,0x2310,0xAC,0xBD,0xBC,0xA1,0xAB,0xBB,
+  0x2591,0x2592,0x2593,0x2502,0x2524,0x2561,0x2562,0x2556,0x2555,0x2563,0x2551,0x2557,0x255D,0x255C,0x255B,0x2510,
+  0x2514,0x2534,0x252C,0x251C,0x2500,0x253C,0x255E,0x255F,0x255A,0x2554,0x2569,0x2566,0x2560,0x2550,0x256C,0x2567,
+  0x2568,0x2564,0x2565,0x2559,0x2558,0x2552,0x2553,0x256B,0x256A,0x2518,0x250C,0x2588,0x2584,0x258C,0x2590,0x2580,
+  0x3B1,0xDF,0x393,0x3C0,0x3A3,0x3C3,0xB5,0x3C4,0x3A6,0x398,0x3A9,0x3B4,0x221E,0x3C6,0x3B5,0x2229,
+  0x2261,0xB1,0x2265,0x2264,0x2320,0x2321,0xF7,0x2248,0xB0,0x2219,0xB7,0x221A,0x207F,0xB2,0x25A0,0xA0
+];
+
+function decodeCp865(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let out = '';
+  for (const b of bytes) {
+    if (b < 0x80) out += String.fromCharCode(b);
+    else out += String.fromCharCode(CP865[b - 0x80]);
+  }
+  return out;
+}
+
+function processFile(file) {
+  csvFilename = file.name;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    // Decode as CP-865 (Danish DOS codepage — ø=0x9B, å=0x86, æ=0x91)
+    const text = decodeCp865(ev.target.result);
+    parseCsvContent(text);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function detectDelimiter(line) {
+  const counts = { ',': 0, ';': 0, '\t': 0, '|': 0 };
+  for (const ch of line) if (ch in counts) counts[ch]++;
+  return Object.entries(counts).sort((a,b) => b[1]-a[1])[0][0];
+}
+
+function splitRow(line, delim) {
+  const res = []; let cur = ''; let q = false;
+  for (const ch of line) {
+    if (ch === '"') { q = !q; }
+    else if (ch === delim && !q) { res.push(cur.trim()); cur = ''; }
+    else cur += ch;
+  }
+  res.push(cur.trim());
+  return res;
+}
+
+
+// Column layout (fixed):
+//   A=0  Line  |  B=1  StopNr  |  C=2  StopNavn  |  D=3  VejNavn
+//   E=4  Northing (NordSyd)  |  F=5  Easting (OstVest)
+const COL_NORTH = 4;
+const COL_EAST  = 5;
+const COL_KEEP  = [0, 1, 2, 3]; // A–D always kept
+const OUT_HEADERS = ['Linje', 'StopNr', 'StopNavn', 'VejNavn', 'latitude', 'longitude'];
+
+function parseCsvContent(text) {
+  const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l => l.trim());
+  if (lines.length < 1) { alert('File appears to be empty.'); return; }
+
+  csvDelim = detectDelimiter(lines[0]);
+
+  // Skip header row if present (first cell is non-numeric text like "1A" or "Linje")
+  const firstRow = splitRow(lines[0], csvDelim);
+  const looksLikeData = !isNaN(parseFloat((firstRow[COL_NORTH]||'').replace(/,/g,'')));
+  csvData = (looksLikeData ? lines : lines.slice(1)).filter(l => l.trim()).map(l => splitRow(l, csvDelim));
+
+  if (!csvData.length) { alert('No data rows found.'); return; }
+
+  document.getElementById('step1-card').style.display = 'none';
+  document.getElementById('step3-card').style.display = 'none';
+
+  runCsvBatch();
+}
+
+function runCsvBatch() {
+  const results = [], errors = [];
+
+  csvData.forEach((row, i) => {
+    const N = parseFloat((row[COL_NORTH] || '').toString().replace(/,/g,''));
+    const E = parseFloat((row[COL_EAST]  || '').toString().replace(/,/g,''));
+    if (isNaN(E) || isNaN(N)) { errors.push(`Row ${i+1}: columns E/F not numeric (got "${row[COL_NORTH]}", "${row[COL_EAST]}")`); return; }
+
+    try {
+      const r = dkAutoConvert(E, N);
+      if (r.outsideDK) errors.push(`Row ${i+1}: result outside Zealand bbox (${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}) — verify manually`);
+      if (r.lat < -90 || r.lat > 90 || r.lon < -180 || r.lon > 180) throw new Error('result out of range');
+      results.push({ lat: r.lat, lon: r.lon, _orig: row });
+    } catch(e) { errors.push(`Row ${i+1}: ${e.message}`); }
+  });
+
+  _csvResults = results;
+  document.getElementById('s3-filename').textContent = `${csvFilename}  ·  ${results.length} stops`;
+  document.getElementById('step3-card').style.display = 'block';
+
+  // Summary
+  const okPct = csvData.length ? Math.round(results.length / csvData.length * 100) : 0;
+  document.getElementById('convert-summary').innerHTML = `
+    <div class="summary-row">
+      <div class="summary-big">${results.length}</div>
+      <div class="summary-label">stop konverteret (${okPct}%)</div>
+      ${errors.length ? `<div class="summary-err">${errors.length} fejlede</div>` : ''}
+    </div>
+    ${errors.length ? `<details><summary style="color:var(--red-text);font-size:0.8rem;cursor:pointer">Vis fejl</summary>
+      <div style="margin-top:8px">${errors.map(e=>`<div class="error">⚠ ${escHtml(e)}</div>`).join('')}</div></details>` : ''}`;
+
+  // Result table: A B C D latitude longitude
+  let tbl = `<table class="data-table"><thead><tr><th>#</th>`;
+  ['Linje','StopNr','StopNavn','VejNavn'].forEach(h => tbl += `<th>${h}</th>`);
+  ['latitude','longitude'].forEach(h => tbl += `<th style="color:var(--green)">${h}</th>`);
+  tbl += '</tr></thead><tbody>';
+  results.forEach((r, i) => {
+    tbl += `<tr><td class="td-dim">${i+1}</td>`;
+    COL_KEEP.forEach(ci => tbl += `<td>${escHtml(r._orig[ci]||'')}</td>`);
+    [r.lat.toFixed(6), r.lon.toFixed(6)].forEach(v => tbl += `<td class="td-green">${v}</td>`);
+    tbl += '</tr>';
+  });
+  tbl += '</tbody></table>';
+  document.getElementById('result-table-wrap').innerHTML = tbl;
+}
+
+function buildCsvResultsString() {
+  if (!_csvResults.length) return '';
+  const header = OUT_HEADERS.map(h => `"${h}"`).join(';');
+  const rows = _csvResults.map(r => {
+    const orig = COL_KEEP.map(i => `"${String(r._orig[i]||'').replace(/"/g,'""')}"`);
+    return [...orig, r.lat.toFixed(6), r.lon.toFixed(6)].join(';');
+  });
+  return [header, ...rows].join('\n');
+}
+
+function downloadCsvResults() {
+  if (!_csvResults.length) return;
+  const base = csvFilename.replace(/\.[^.]+$/, '');
+  const blob = new Blob(['\uFEFF' + buildCsvResultsString()], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `${base}_gps.csv`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function resetCsv() {
+  csvData = []; csvFilename = ''; _csvResults = [];
+  document.getElementById('csv-file-input').value = '';
+  document.getElementById('step1-card').style.display = 'block';
+  document.getElementById('step3-card').style.display = 'none';
+  dzLeave({});
+}
+
+// ──────────────────────────────────────────────
+// Route Map tab
+let routeStops = [], routeFilename = '';
+
+function routeDzLeave(e) {
+  const dz = document.getElementById('route-drop-zone');
+  dz.style.borderColor = ''; dz.style.background = '';
+}
+function routeDzDrop(e) {
+  e.preventDefault(); routeDzLeave(e);
+  const f = e.dataTransfer.files[0];
+  if (f) processRouteFile(f);
+}
+function loadRouteFile(e) { if (e.target.files[0]) processRouteFile(e.target.files[0]); }
+
+// Parse coordinates that may have Danish thousands-separator dots
+// e.g. "55.644.910" → 55.644910,  "12.461.253" → 12.461253
+function parseCoordStr(s) {
+  s = String(s).trim().replace(/,/g, '.');  // normalise comma decimal
+  const parts = s.split('.');
+  if (parts.length > 2) {
+    // "55.644.910" → "55" + "." + "644" + "910" = "55.644910"
+    return parseFloat(parts[0] + '.' + parts.slice(1).join(''));
+  }
+  return parseFloat(s);
+}
+
+function processRouteFile(file) {
+  routeFilename = file.name;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const text = decodeCp865(ev.target.result);
+    parseRouteContent(text);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseRouteContent(text) {
+  const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l => l.trim());
+  if (lines.length < 2) { alert('Filen ser tom ud.'); return; }
+
+  const delim = detectDelimiter(lines[0]);
+  const firstRow = splitRow(lines[0], delim);
+  // Skip header if first row has non-numeric lat/lon
+  const hasHeader = isNaN(parseCoordStr(firstRow[4] || ''));
+  const dataLines = hasHeader ? lines.slice(1) : lines;
+
+  routeStops = dataLines.filter(l => l.trim()).map(l => {
+    const c = splitRow(l, delim);
+    return {
+      linje:  c[0] || '',
+      stopNr: c[1] || '',
+      navn:   c[2] || '',
+      vej:    c[3] || '',
+      lat:    parseCoordStr(c[4] || ''),
+      lon:    parseCoordStr(c[5] || ''),
+    };
+  }).filter(s => !isNaN(s.lat) && !isNaN(s.lon) && s.lat > 50 && s.lat < 60);
+
+  if (!routeStops.length) { alert('Ingen gyldige GPS-koordinater fundet. Tjek at kolonner er lat;lon.'); return; }
+
+  const linjeNavn = routeStops[0].linje || 'Rute';
+  document.getElementById('route-drop-card').style.display = 'none';
+  document.getElementById('route-results-card').style.display = 'block';
+  document.getElementById('route-info').textContent =
+    `Linje ${linjeNavn}  ·  ${routeStops.length} stop  ·  ${routeFilename}`;
+
+  // Google Maps note
+  const MAX_WP = 10;
+  const note = routeStops.length > MAX_WP
+    ? `Google Maps viser ${MAX_WP} jævnt fordelte stop (ud af ${routeStops.length}). Download KML for alle stop.`
+    : `Alle ${routeStops.length} stop vises i Google Maps.`;
+  document.getElementById('route-gmaps-note').textContent = note;
+
+  // Stop table
+  let tbl = `<table class="data-table"><thead><tr>
+    <th>#</th><th>StopNr</th><th>Navn</th>
+    <th style="color:var(--green)">latitude</th>
+    <th style="color:var(--green)">longitude</th>
+  </tr></thead><tbody>`;
+  routeStops.forEach((s, i) => {
+    tbl += `<tr>
+      <td class="td-dim">${i+1}</td>
+      <td>${escHtml(s.stopNr)}</td>
+      <td>${escHtml(s.navn)}</td>
+      <td class="td-green">${s.lat.toFixed(6)}</td>
+      <td class="td-green">${s.lon.toFixed(6)}</td>
+    </tr>`;
+  });
+  tbl += '</tbody></table>';
+  document.getElementById('route-stop-table').innerHTML = tbl;
+}
+
+function escXml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+}
+
+function downloadRouteKml() {
+  if (!routeStops.length) return;
+  const linjeNavn = routeStops[0].linje || 'Rute';
+  const routeCoords = routeStops.map(s => `${s.lon},${s.lat},0`).join('\n              ');
+
+  const placemarks = routeStops.map((s, i) =>
+    `  <Placemark>
+    <name>${escXml(s.stopNr)} – ${escXml(s.navn)}</name>
+    <description>${escXml(s.vej)}</description>
+    <styleUrl>#stop${i === 0 ? '_first' : i === routeStops.length-1 ? '_last' : ''}</styleUrl>
+    <Point><coordinates>${s.lon},${s.lat},0</coordinates></Point>
+  </Placemark>`).join('\n');
+
+  const kml = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+  <name>Linje ${escXml(linjeNavn)}</name>
+  <Style id="route">
+    <LineStyle><color>ff4444ff</color><width>4</width></LineStyle>
+    <PolyStyle><fill>0</fill></PolyStyle>
+  </Style>
+  <Style id="stop">
+    <IconStyle><scale>0.7</scale>
+      <Icon><href>http://maps.google.com/mapfiles/kml/paddle/blu-circle-lv.png</href></Icon>
+      <hotSpot x="0.5" y="0" xunits="fraction" yunits="fraction"/>
+    </IconStyle>
+    <LabelStyle><scale>0.8</scale></LabelStyle>
+  </Style>
+  <Style id="stop_first">
+    <IconStyle><scale>1.0</scale>
+      <Icon><href>http://maps.google.com/mapfiles/kml/paddle/grn-circle.png</href></Icon>
+    </IconStyle>
+  </Style>
+  <Style id="stop_last">
+    <IconStyle><scale>1.0</scale>
+      <Icon><href>http://maps.google.com/mapfiles/kml/paddle/red-circle.png</href></Icon>
+    </IconStyle>
+  </Style>
+  <Placemark>
+    <name>Linje ${escXml(linjeNavn)} – rutelinje</name>
+    <styleUrl>#route</styleUrl>
+    <LineString>
+      <tessellate>1</tessellate>
+      <coordinates>
+              ${routeCoords}
+      </coordinates>
+    </LineString>
+  </Placemark>
+${placemarks}
+</Document>
+</kml>`;
+
+  const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `linje_${linjeNavn}_rute.kml`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function openGoogleMapsRoute() {
+  if (!routeStops.length) return;
+  const total = routeStops.length;
+  const MAX = 10;
+
+  // Sample evenly: always include first and last, pick the rest evenly
+  let sampled;
+  if (total <= MAX) {
+    sampled = routeStops;
+  } else {
+    sampled = [routeStops[0]];
+    const step = (total - 1) / (MAX - 1);
+    for (let i = 1; i < MAX - 1; i++) {
+      sampled.push(routeStops[Math.round(i * step)]);
+    }
+    sampled.push(routeStops[total - 1]);
+  }
+
+  const parts = sampled.map(s => `${s.lat.toFixed(6)},${s.lon.toFixed(6)}`);
+  const url = 'https://www.google.com/maps/dir/' + parts.join('/');
+  window.open(url, '_blank');
+}
+
+function resetRoute() {
+  routeStops = []; routeFilename = '';
+  document.getElementById('route-file-input').value = '';
+  document.getElementById('route-drop-card').style.display = 'block';
+  document.getElementById('route-results-card').style.display = 'none';
+}
+
+// ── PWA service worker registration ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+}
+
+</script>
+</body>
+</html>

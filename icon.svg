@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="#09090b"/>
+  <!-- Map pin -->
+  <path d="M256 88c-75.1 0-136 60.9-136 136 0 94.4 118 256 136 256s136-161.6 136-256c0-75.1-60.9-136-136-136z" fill="#6366f1"/>
+  <circle cx="256" cy="224" r="52" fill="#09090b"/>
+  <!-- Arrow / coordinate lines subtle -->
+  <line x1="140" y1="420" x2="372" y2="420" stroke="#27272f" stroke-width="6" stroke-linecap="round"/>
+</svg>
