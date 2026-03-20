@@ -550,7 +550,8 @@
       </div>
 
       <div class="btn-row" style="margin-top:0;flex-wrap:wrap;gap:8px">
-        <button class="btn btn-primary" onclick="downloadRouteKml()">⬇ Download KML</button>
+        <button class="btn btn-primary" onclick="downloadRouteKml()">⬇ Download KML (stop)</button>
+        <button class="btn btn-primary" id="btn-driving-kml" style="background:#7c3aed" onclick="downloadDrivingRouteKml()">🛣 Download Kørerute KML</button>
         <button class="btn btn-primary" style="background:#16a34a" onclick="openGoogleMapsRoute()">🗺 Åbn i Google Maps</button>
         <button class="btn btn-ghost" onclick="resetRoute()">Ny fil</button>
       </div>
@@ -1317,6 +1318,101 @@ ${placemarks}
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = `linje_${linjeNavn}_rute.kml`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function downloadDrivingRouteKml() {
+  if (!routeStops.length) return;
+  const btn = document.getElementById('btn-driving-kml');
+  const orig = btn.textContent;
+  btn.textContent = '⏳ Henter rute…';
+  btn.disabled = true;
+  try {
+    const coords = await fetchOsrmRoute(routeStops);
+    buildDrivingKml(coords);
+  } catch(e) {
+    alert('Kunne ikke hente kørerute: ' + e.message);
+  } finally {
+    btn.textContent = orig;
+    btn.disabled = false;
+  }
+}
+
+async function fetchOsrmRoute(stops) {
+  const BATCH = 100;
+  const allCoords = [];
+  let i = 0;
+  while (i < stops.length) {
+    const batch = stops.slice(i, Math.min(i + BATCH, stops.length));
+    const coordStr = batch.map(s => `${s.lon.toFixed(6)},${s.lat.toFixed(6)}`).join(';');
+    const url = `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`OSRM svarer ikke (HTTP ${resp.status})`);
+    const data = await resp.json();
+    if (data.code !== 'Ok' || !data.routes?.length) throw new Error('OSRM fandt ingen rute');
+    const geom = data.routes[0].geometry.coordinates;
+    if (allCoords.length > 0) geom.shift(); // remove duplicate junction point
+    allCoords.push(...geom);
+    if (i + BATCH >= stops.length) break;
+    i += BATCH - 1; // overlap by 1 stop so batches connect
+  }
+  return allCoords; // [[lon, lat], ...]
+}
+
+function buildDrivingKml(routeCoords) {
+  const linjeNavn = routeStops[0].linje || 'Rute';
+  const coordStr = routeCoords.map(c => `${c[0]},${c[1]},0`).join('\n              ');
+  const placemarks = routeStops.map((s, i) =>
+    `  <Placemark>
+    <name>${escXml(s.stopNr)} \u2013 ${escXml(s.navn)}</name>
+    <description>${escXml(s.vej)}</description>
+    <styleUrl>#stop${i === 0 ? '_first' : i === routeStops.length-1 ? '_last' : ''}</styleUrl>
+    <Point><coordinates>${s.lon},${s.lat},0</coordinates></Point>
+  </Placemark>`).join('\n');
+
+  const kml = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+  <name>Linje ${escXml(linjeNavn)} \u2013 K\xf8rerute</name>
+  <Style id="route">
+    <LineStyle><color>ffcc0000</color><width>5</width></LineStyle>
+    <PolyStyle><fill>0</fill></PolyStyle>
+  </Style>
+  <Style id="stop">
+    <IconStyle><scale>0.7</scale>
+      <Icon><href>http://maps.google.com/mapfiles/kml/paddle/blu-circle-lv.png</href></Icon>
+      <hotSpot x="0.5" y="0" xunits="fraction" yunits="fraction"/>
+    </IconStyle>
+    <LabelStyle><scale>0.8</scale></LabelStyle>
+  </Style>
+  <Style id="stop_first">
+    <IconStyle><scale>1.0</scale>
+      <Icon><href>http://maps.google.com/mapfiles/kml/paddle/grn-circle.png</href></Icon>
+    </IconStyle>
+  </Style>
+  <Style id="stop_last">
+    <IconStyle><scale>1.0</scale>
+      <Icon><href>http://maps.google.com/mapfiles/kml/paddle/red-circle.png</href></Icon>
+    </IconStyle>
+  </Style>
+  <Placemark>
+    <name>Linje ${escXml(linjeNavn)} \u2013 K\xf8rerute</name>
+    <styleUrl>#route</styleUrl>
+    <LineString>
+      <tessellate>1</tessellate>
+      <coordinates>
+              ${coordStr}
+      </coordinates>
+    </LineString>
+  </Placemark>
+${placemarks}
+</Document>
+</kml>`;
+
+  const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `linje_${linjeNavn}_koeruete.kml`; a.click();
   URL.revokeObjectURL(url);
 }
 
