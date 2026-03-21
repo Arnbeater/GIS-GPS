@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -620,8 +622,13 @@
       <div id="route-gmaps-note" style="margin-top:12px;font-size:0.8rem;color:var(--text-3)"></div>
     </div>
 
+    <div class="card" style="padding:0;overflow:hidden;position:relative">
+      <div id="route-map" style="height:480px;width:100%;border-radius:var(--radius)"></div>
+      <div id="route-map-status" style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(9,9,11,0.82);color:var(--text-2);font-size:0.75rem;padding:5px 14px;border-radius:999px;pointer-events:none;display:none"></div>
+    </div>
+
     <div class="card" style="padding:0;overflow:hidden">
-      <div id="route-stop-table" style="overflow-x:auto;max-height:500px;overflow-y:auto"></div>
+      <div id="route-stop-table" style="overflow-x:auto;max-height:400px;overflow-y:auto"></div>
     </div>
   </div>
 
@@ -1223,6 +1230,73 @@ function resetCsv() {
 }
 
 // ──────────────────────────────────────────────
+// Leaflet kort
+let routeMap = null;
+
+function initRouteMap() {
+  // Ryd eksisterende kort
+  if (routeMap) { routeMap.remove(); routeMap = null; }
+
+  const mapEl = document.getElementById('route-map');
+  routeMap = L.map(mapEl, { zoomControl: true });
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19,
+  }).addTo(routeMap);
+
+  // Markør-ikoner
+  function stopIcon(color, size) {
+    return L.divIcon({
+      html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4)"></div>`,
+      iconSize: [size, size],
+      iconAnchor: [size/2, size/2],
+      className: '',
+    });
+  }
+
+  const bounds = [];
+  routeStops.forEach((s, i) => {
+    const isFirst = i === 0;
+    const isLast  = i === routeStops.length - 1;
+    const color   = isFirst ? '#22c55e' : isLast ? '#ef4444' : '#6366f1';
+    const size    = isFirst || isLast ? 14 : 10;
+
+    const marker = L.marker([s.lat, s.lon], { icon: stopIcon(color, size) });
+    marker.bindPopup(
+      `<strong>${escHtml(s.stopNr)}</strong> – ${escHtml(s.navn)}<br>` +
+      `<span style="color:#666;font-size:0.85em">${escHtml(s.vej)}</span>`
+    );
+    marker.addTo(routeMap);
+    bounds.push([s.lat, s.lon]);
+  });
+
+  // Tegn lige linjer som placeholder
+  const straightLine = L.polyline(bounds, {
+    color: '#6366f1', weight: 3, opacity: 0.4, dashArray: '6 5',
+  }).addTo(routeMap);
+
+  routeMap.fitBounds(bounds, { padding: [30, 30] });
+
+  // Hent OSRM-rute og erstat stiplede linjer
+  const statusEl = document.getElementById('route-map-status');
+  statusEl.textContent = '⏳ Henter kørerute…';
+  statusEl.style.display = 'block';
+
+  fetchOsrmRoute(routeStops).then(coords => {
+    routeMap.removeLayer(straightLine);
+    L.polyline(coords.map(c => [c[1], c[0]]), {
+      color: '#6366f1', weight: 4, opacity: 0.85,
+    }).addTo(routeMap);
+    statusEl.textContent = `✓ Kørerute hentet (${routeStops.length} stop)`;
+    setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+  }).catch(() => {
+    statusEl.textContent = '⚠ Kørerute ikke tilgængelig — viser direkte linjer';
+    setTimeout(() => { statusEl.style.display = 'none'; }, 4000);
+  });
+}
+
+// ──────────────────────────────────────────────
 // Eksempel-CSV download
 function downloadExampleCsv() {
   const rows = [
@@ -1334,6 +1408,9 @@ function parseRouteContent(text) {
   });
   tbl += '</tbody></table>';
   document.getElementById('route-stop-table').innerHTML = tbl;
+
+  // Vis interaktivt kort
+  initRouteMap();
 }
 
 function escXml(s) {
@@ -1519,6 +1596,7 @@ function openGoogleMapsRoute() {
 
 function resetRoute() {
   routeStops = []; routeFilename = '';
+  if (routeMap) { routeMap.remove(); routeMap = null; }
   document.getElementById('route-file-input').value = '';
   document.getElementById('route-drop-card').style.display = 'block';
   document.getElementById('route-results-card').style.display = 'none';
