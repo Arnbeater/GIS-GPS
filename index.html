@@ -624,7 +624,6 @@
 
     <div class="card" style="padding:0;overflow:hidden;position:relative">
       <div id="route-map" style="height:480px;width:100%;border-radius:var(--radius)"></div>
-      <div id="route-map-status" style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(9,9,11,0.82);color:var(--text-2);font-size:0.75rem;padding:5px 14px;border-radius:999px;pointer-events:none;display:none"></div>
     </div>
 
     <div class="card" style="padding:0;overflow:hidden">
@@ -1271,29 +1270,12 @@ function initRouteMap() {
     bounds.push([s.lat, s.lon]);
   });
 
-  // Tegn lige linjer som placeholder
-  const straightLine = L.polyline(bounds, {
-    color: '#6366f1', weight: 3, opacity: 0.4, dashArray: '6 5',
+  // Tegn busruten som linje gennem stoppositionerne i rækkefølge
+  L.polyline(bounds, {
+    color: '#6366f1', weight: 4, opacity: 0.85,
   }).addTo(routeMap);
 
   routeMap.fitBounds(bounds, { padding: [30, 30] });
-
-  // Hent OSRM-rute og erstat stiplede linjer
-  const statusEl = document.getElementById('route-map-status');
-  statusEl.textContent = '⏳ Henter kørerute…';
-  statusEl.style.display = 'block';
-
-  fetchOsrmRoute(routeStops).then(coords => {
-    routeMap.removeLayer(straightLine);
-    L.polyline(coords.map(c => [c[1], c[0]]), {
-      color: '#6366f1', weight: 4, opacity: 0.85,
-    }).addTo(routeMap);
-    statusEl.textContent = `✓ Kørerute hentet (${routeStops.length} stop)`;
-    setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
-  }).catch(() => {
-    statusEl.textContent = '⚠ Kørerute ikke tilgængelig — viser direkte linjer';
-    setTimeout(() => { statusEl.style.display = 'none'; }, 4000);
-  });
 }
 
 // ──────────────────────────────────────────────
