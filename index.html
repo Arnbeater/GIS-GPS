@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="da">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GIS → GPS Converter</title>
+<title>GIS til GPS — Movia stoppestedsværktøj</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -72,9 +72,37 @@
   }
   h1 span { color: var(--accent-hi); }
   .subtitle {
-    color: var(--text-3);
+    color: var(--text-2);
     font-size: 0.88rem;
-    letter-spacing: 0.02em;
+    line-height: 1.6;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+
+  /* Divider between primary and advanced tabs */
+  .tab-divider {
+    width: 1px;
+    background: var(--border-hi);
+    margin: 6px 4px;
+    flex-shrink: 0;
+    align-self: stretch;
+  }
+
+  /* Column legend for CSV info box */
+  .col-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    margin-top: 8px;
+  }
+  .col-legend-item {
+    font-size: 0.78rem;
+    color: var(--text-3);
+  }
+  .col-legend-item strong {
+    color: var(--blue-text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
   }
 
   /* ── Tabs ── */
@@ -90,6 +118,7 @@
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 4px;
+    align-items: stretch;
   }
   .tab {
     flex: 1;
@@ -113,6 +142,9 @@
     box-shadow: 0 2px 8px rgba(99,102,241,0.35);
   }
   .tab:hover:not(.active) { color: var(--text-2); background: var(--border); }
+  .tab.tab-secondary { opacity: 0.7; font-size: 0.73rem; }
+  .tab.tab-secondary:hover:not(.active) { opacity: 1; }
+  .tab.tab-secondary.active { opacity: 1; }
 
   /* ── Panels ── */
   .panel { display: none; max-width: 780px; margin: 0 auto; }
@@ -340,6 +372,7 @@
     h1 { font-size: 1.5rem; }
     .tabs { flex-wrap: wrap; }
     .tab { flex: 0 0 calc(33.33% - 4px); font-size: 0.72rem; }
+    .tab-divider { display: none; }
   }
 </style>
 </head>
@@ -348,52 +381,54 @@
 <div class="header">
   <div class="header-badge">Movia · ETRS89 → WGS84</div>
   <h1>GIS <span>→</span> GPS</h1>
-  <p class="subtitle">UTM &nbsp;·&nbsp; DMS &nbsp;·&nbsp; DDM &nbsp;·&nbsp; Decimal Degrees &nbsp;·&nbsp; WGS84</p>
+  <p class="subtitle">Konvertér koordinater, upload CSV-filer og hent KML eller rute til kortbrug og planlægning.</p>
 </div>
 
 <div class="tabs-wrap">
 <div class="tabs">
-  <button class="tab active" onclick="switchTab('utm', this)">UTM ↔ GPS</button>
-  <button class="tab" onclick="switchTab('gis', this)">GIS → GPS</button>
-  <button class="tab" onclick="switchTab('fmt', this)">Formater</button>
-  <button class="tab" onclick="switchTab('dms', this)">DMS Parser</button>
-  <button class="tab" onclick="switchTab('batch', this)">CSV Import</button>
-  <button class="tab" onclick="switchTab('route', this)">Rute kort</button>
+  <button class="tab active" onclick="switchTab('gis', this)">GIS → GPS</button>
+  <button class="tab" onclick="switchTab('batch', this)">CSV-konvertering</button>
+  <button class="tab" onclick="switchTab('route', this)">KML og rute</button>
+  <div class="tab-divider"></div>
+  <button class="tab tab-secondary" onclick="switchTab('utm', this)">UTM ↔ GPS</button>
+  <button class="tab tab-secondary" onclick="switchTab('fmt', this)">Formatkonverter</button>
+  <button class="tab tab-secondary" onclick="switchTab('dms', this)">DMS-parser</button>
 </div>
 </div>
 
 <!-- ===== TAB: GIS → GPS (Denmark ETRS89) ===== -->
-<div class="panel" id="panel-gis">
+<div class="panel active" id="panel-gis">
   <div class="card">
-    <h2>GIS → GPS &nbsp;<span class="h2-accent">ETRS89 · Danmark / Sjælland</span></h2>
+    <h2>Konvertér ét koordinatsæt &nbsp;<span class="h2-accent">ETRS89 · Sjælland, Lolland, Falster, Møn</span></h2>
     <div class="field">
-      <label>Paste GIS coordinates (Northing and Easting — any separator)</label>
+      <label>Northing og Easting — ethvert separatortegn</label>
       <input type="text" id="gis-input" placeholder="6172229.63;717965.34" oninput="convertGis()">
     </div>
     <div class="btn-row">
-      <button class="btn btn-ghost" onclick="clearGis()">Clear</button>
+      <button class="btn btn-ghost" onclick="clearGis()">Ryd</button>
     </div>
     <div id="gis-result"></div>
   </div>
   <div class="info-box">
-    Paste the two numbers from columns E and F — separated by space, semicolon, comma, or tab. Northing and Easting are auto-detected by value size.
+    Indsæt de to tal fra kolonne E og F i din GIS-eksport. Du kan bruge mellemrum, semikolon, komma eller tabulator som separator. Northing og Easting registreres automatisk ud fra talstørrelsen.<br><br>
+    <strong>Eksempel:</strong> Northing ≈ 6.040.000–6.240.000 · Easting ≈ 440.000–760.000 (Sjælland, Lolland, Falster, Møn)
   </div>
 </div>
 
 <!-- ===== TAB: UTM ↔ GPS ===== -->
-<div class="panel active" id="panel-utm">
+<div class="panel" id="panel-utm">
   <div class="card">
-    <h2>UTM → WGS84 (GPS)</h2>
+    <h2>UTM til GPS (WGS84)</h2>
     <div class="row">
       <div class="field" style="max-width:80px">
-        <label>Zone #</label>
+        <label>Zone nr.</label>
         <input type="number" id="utm-zone" min="1" max="60" placeholder="18" value="">
       </div>
       <div class="field" style="max-width:80px">
-        <label>Band</label>
+        <label>Halvkugle</label>
         <select id="utm-band">
-          <option value="N">N (North)</option>
-          <option value="S">S (South)</option>
+          <option value="N">N (Nord)</option>
+          <option value="S">S (Syd)</option>
         </select>
       </div>
       <div class="field">
@@ -406,111 +441,133 @@
       </div>
     </div>
     <div class="btn-row">
-      <button class="btn btn-primary" onclick="utmToGps()">Convert →</button>
-      <button class="btn btn-ghost" onclick="clearUtm()">Clear</button>
+      <button class="btn btn-primary" onclick="utmToGps()">Konvertér →</button>
+      <button class="btn btn-ghost" onclick="clearUtm()">Ryd</button>
     </div>
     <div id="utm-result"></div>
   </div>
 
   <div class="card">
-    <h2>WGS84 (GPS) → UTM</h2>
+    <h2>GPS (WGS84) til UTM</h2>
     <div class="row">
       <div class="field">
-        <label>Latitude (°)</label>
+        <label>Breddegrad (°)</label>
         <input type="number" id="gps-lat" placeholder="41.998" step="0.000001">
       </div>
       <div class="field">
-        <label>Longitude (°)</label>
+        <label>Længdegrad (°)</label>
         <input type="number" id="gps-lon" placeholder="-75.345" step="0.000001">
       </div>
     </div>
-    <p class="zone-preview" id="zone-hint">Enter coordinates to auto-detect UTM zone.</p>
+    <p class="zone-preview" id="zone-hint">Angiv koordinater for at finde UTM-zone automatisk.</p>
     <div class="btn-row">
-      <button class="btn btn-primary" onclick="gpsToUtm()">Convert →</button>
-      <button class="btn btn-ghost" onclick="clearGps()">Clear</button>
+      <button class="btn btn-primary" onclick="gpsToUtm()">Konvertér →</button>
+      <button class="btn btn-ghost" onclick="clearGps()">Ryd</button>
     </div>
     <div id="gps-result"></div>
   </div>
 
   <div class="info-box">
-    <strong>Note:</strong> UTM uses the WGS84 ellipsoid (same as GPS/Google Maps). Zone bands C–M = Southern hemisphere, N–X = Northern hemisphere. Enter hemisphere as N or S if unsure of band letter.
+    UTM bruger WGS84-ellipsoiden (samme som GPS og Google Maps). Zonebånd C–M = sydlig halvkugle, N–X = nordlig halvkugle. Angiv halvkugle som N eller S hvis du er i tvivl om zonebogstavet.
   </div>
 </div>
 
 <!-- ===== TAB: FORMAT CONVERT ===== -->
 <div class="panel" id="panel-fmt">
   <div class="card">
-    <h2>Coordinate Format Converter</h2>
+    <h2>Konvertér koordinatformat</h2>
     <div class="row">
       <div class="field">
-        <label>Latitude</label>
+        <label>Breddegrad</label>
         <input type="number" id="fmt-lat" placeholder="41.99823" step="0.000001">
       </div>
       <div class="field">
-        <label>Longitude</label>
+        <label>Længdegrad</label>
         <input type="number" id="fmt-lon" placeholder="-75.34512" step="0.000001">
       </div>
     </div>
     <div class="btn-row">
-      <button class="btn btn-primary" onclick="convertFormats()">Convert All Formats</button>
-      <button class="btn btn-ghost" onclick="clearFmt()">Clear</button>
+      <button class="btn btn-primary" onclick="convertFormats()">Vis alle formater</button>
+      <button class="btn btn-ghost" onclick="clearFmt()">Ryd</button>
     </div>
     <div id="fmt-result"></div>
+  </div>
+  <div class="info-box">
+    Angiv et koordinat i decimalgrader og få det vist i alle gængse formater: DD, DMS, DDM, UTM, ISO 6709 og Google Maps-format.
   </div>
 </div>
 
 <!-- ===== TAB: DMS PARSER ===== -->
 <div class="panel" id="panel-dms">
   <div class="card">
-    <h2>DMS / DDM → Decimal Degrees</h2>
+    <h2>DMS / DDM til decimalgrader</h2>
     <div class="field" style="margin-bottom:12px">
-      <label>Paste DMS string (latitude)</label>
-      <input type="text" id="dms-lat-input" placeholder='e.g.  41° 59&apos; 53.6" N  or  41 59 53.6N'>
+      <label>DMS-streng (breddegrad)</label>
+      <input type="text" id="dms-lat-input" placeholder='f.eks. 41° 59&apos; 53.6" N  eller  41 59 53.6N'>
     </div>
     <div class="field" style="margin-bottom:12px">
-      <label>Paste DMS string (longitude)</label>
-      <input type="text" id="dms-lon-input" placeholder='e.g.  75° 20&apos; 42.4" W  or  -75 20 42.4'>
+      <label>DMS-streng (længdegrad)</label>
+      <input type="text" id="dms-lon-input" placeholder='f.eks. 75° 20&apos; 42.4" W  eller  -75 20 42.4'>
     </div>
     <div class="field" style="margin-bottom:12px">
-      <label>— or — paste full coordinate pair</label>
+      <label>— eller — indsæt koordinatpar</label>
       <input type="text" id="dms-pair-input" placeholder='41° 59&apos; 53.6" N, 75° 20&apos; 42.4" W'>
     </div>
     <div class="btn-row">
-      <button class="btn btn-primary" onclick="parseDms()">Parse →</button>
-      <button class="btn btn-ghost" onclick="clearDms()">Clear</button>
+      <button class="btn btn-primary" onclick="parseDms()">Konvertér →</button>
+      <button class="btn btn-ghost" onclick="clearDms()">Ryd</button>
     </div>
     <div id="dms-result"></div>
   </div>
+  <div class="info-box">
+    Indsæt et koordinat i grader/minutter/sekunder (DMS) eller grader/decimalminutter (DDM) og få det konverteret til decimalgrader. Understøtter de fleste formater med eller uden retningsbogstaver (N/S/E/W).
+  </div>
 </div>
 
-<!-- ===== TAB: CSV IMPORT ===== -->
+<!-- ===== TAB: CSV-KONVERTERING ===== -->
 <div class="panel" id="panel-batch">
 
-  <!-- Drop zone (always visible until file is loaded) -->
+  <!-- Drop zone (altid synlig indtil fil er indlæst) -->
   <div class="card" id="step1-card">
-    <h2>Drop your CSV</h2>
+    <h2>Upload GIS-CSV til konvertering</h2>
     <div id="drop-zone" class="drop-zone-inner"
       onclick="document.getElementById('csv-file-input').click()"
       ondragover="dzOver(event)" ondragleave="dzLeave(event)" ondrop="dzDrop(event)">
       <div class="drop-zone-icon">📂</div>
-      <div class="drop-zone-title">Drop CSV her eller klik for at vælge</div>
-      <div class="drop-zone-sub">Kolonne E = Northing &nbsp;·&nbsp; Kolonne F = Easting &nbsp;·&nbsp; ETRS89 / Danmark</div>
+      <div class="drop-zone-title">Træk CSV hertil, eller klik for at vælge fil</div>
+      <div class="drop-zone-sub">ETRS89 · Sjælland, Lolland, Falster, Møn · Kolonne E = Northing · Kolonne F = Easting</div>
     </div>
     <input type="file" id="csv-file-input" accept=".csv,.txt,.tsv" style="display:none" onchange="loadCsvFile(event)">
     <div class="info-box" style="margin-top:16px">
-      Expected columns: &nbsp;<strong>A</strong> Line &nbsp;·&nbsp; <strong>B</strong> Stop No. &nbsp;·&nbsp; <strong>C</strong> Stop Name &nbsp;·&nbsp; <strong>D</strong> Road &nbsp;·&nbsp; <strong>E</strong> Northing &nbsp;·&nbsp; <strong>F</strong> Easting<br>
-      Output: A · B · C · D · latitude · longitude
+      <strong>Forventede kolonner i inputfilen:</strong>
+      <div class="col-legend">
+        <span class="col-legend-item"><strong>A</strong> Linje</span>
+        <span class="col-legend-item"><strong>B</strong> StopNr</span>
+        <span class="col-legend-item"><strong>C</strong> StopNavn</span>
+        <span class="col-legend-item"><strong>D</strong> VejNavn</span>
+        <span class="col-legend-item"><strong>E</strong> Northing</span>
+        <span class="col-legend-item"><strong>F</strong> Easting</span>
+      </div>
+      <div style="margin-top:10px">
+        <strong>Output-CSV:</strong> Linje · StopNr · StopNavn · VejNavn · latitude · longitude
+      </div>
+      <div style="margin-top:8px">
+        Filer fra Movia GIS læses automatisk korrekt (CP-865 / dansk DOS-tegnsæt). Separatoren registreres automatisk.
+      </div>
+      <div style="margin-top:12px">
+        <button class="btn btn-ghost" onclick="downloadExampleCsv()" style="font-size:0.78rem;padding:6px 14px">⬇ Download eksempel-CSV</button>
+      </div>
     </div>
   </div>
 
-  <!-- Results (shown after conversion) -->
+  <!-- Resultater (vises efter konvertering) -->
   <div id="step3-card" style="display:none">
     <div class="card">
       <h2>Resultater &nbsp;<span id="s3-filename" class="h2-accent"></span></h2>
       <div id="convert-summary" style="margin-bottom:12px"></div>
       <div class="btn-row" style="margin-top:0">
-        <button class="btn btn-primary" onclick="downloadCsvResults()">⬇ Download CSV</button>
-        <button class="btn btn-ghost" onclick="resetCsv()">Convert another file</button>
+        <button class="btn btn-primary" onclick="downloadCsvResults()">⬇ Download GPS-CSV</button>
+        <button class="btn btn-ghost" onclick="resetCsv()">Konvertér ny fil</button>
       </div>
     </div>
     <div class="card" style="padding:0;overflow:hidden">
@@ -520,22 +577,26 @@
 
 </div>
 
-<!-- ===== TAB: RUTE KORT ===== -->
+<!-- ===== TAB: KML OG RUTE ===== -->
 <div class="panel" id="panel-route">
 
   <div class="card" id="route-drop-card">
-    <h2>Drop din GPS CSV</h2>
+    <h2>Lav KML-fil eller rute fra GPS-CSV</h2>
     <div id="route-drop-zone" class="drop-zone-inner"
       onclick="document.getElementById('route-file-input').click()"
       ondragover="dzOver(event)" ondragleave="routeDzLeave(event)" ondrop="routeDzDrop(event)">
       <div class="drop-zone-icon">🗺️</div>
-      <div class="drop-zone-title">Drop den konverterede GPS CSV her</div>
+      <div class="drop-zone-title">Træk den konverterede GPS-CSV hertil</div>
       <div class="drop-zone-sub">Linje · StopNr · StopNavn · VejNavn · latitude · longitude</div>
     </div>
     <input type="file" id="route-file-input" accept=".csv,.txt" style="display:none" onchange="loadRouteFile(event)">
     <div class="info-box" style="margin-top:16px">
-      Brug den CSV som <strong>CSV Import</strong> tabben producerer.<br>
-      Du får et <strong>KML-fil</strong> til Google My Maps (alle stop) + et <strong>Google Maps link</strong> med ruten.
+      Upload den GPS-CSV du har hentet fra <strong>CSV-konvertering</strong>. Appen laver:<br>
+      <div style="margin-top:8px;line-height:2">
+        &bull; En <strong>KML-fil til Google My Maps</strong> — alle stop med navne og rutelinje<br>
+        &bull; En <strong>kørerute KML</strong> baseret på vejnettet (via OSRM)<br>
+        &bull; Et <strong>Google Maps-link</strong> med udvalgte stop langs ruten
+      </div>
     </div>
   </div>
 
@@ -551,7 +612,7 @@
 
       <div class="btn-row" style="margin-top:0;flex-wrap:wrap;gap:8px">
         <button class="btn btn-primary" onclick="downloadRouteKml()">⬇ Download KML (stop)</button>
-        <button class="btn btn-primary" id="btn-driving-kml" style="background:#7c3aed" onclick="downloadDrivingRouteKml()">🛣 Download Kørerute KML</button>
+        <button class="btn btn-primary" id="btn-driving-kml" style="background:#7c3aed" onclick="downloadDrivingRouteKml()">🛣 Download kørerute KML</button>
         <button class="btn btn-primary" style="background:#16a34a" onclick="openGoogleMapsRoute()">🗺 Åbn i Google Maps</button>
         <button class="btn btn-ghost" onclick="resetRoute()">Ny fil</button>
       </div>
@@ -737,27 +798,27 @@ function utmToGps() {
   const E    = parseFloat(document.getElementById('utm-easting').value);
   const N    = parseFloat(document.getElementById('utm-northing').value);
 
-  if (!zone || zone < 1 || zone > 60) return showError('utm-result', 'Zone must be 1–60.');
-  if (isNaN(E) || isNaN(N)) return showError('utm-result', 'Enter valid Easting and Northing values.');
-  if (E < 100000 || E > 900000) return showError('utm-result', 'Easting should be between 100,000 and 900,000 m.');
+  if (!zone || zone < 1 || zone > 60) return showError('utm-result', 'Zone skal være 1–60.');
+  if (isNaN(E) || isNaN(N)) return showError('utm-result', 'Angiv gyldige værdier for Easting og Northing.');
+  if (E < 100000 || E > 900000) return showError('utm-result', 'Easting skal ligge mellem 100.000 og 900.000 m.');
 
   const isNorth = hemi === 'N';
   try {
     const { lat, lon } = utmToLatLon(zone, isNorth, E, N);
     if (lat < -90 || lat > 90 || lon < -180 || lon > 180)
-      return showError('utm-result', 'Result out of valid range — check zone/hemisphere.');
+      return showError('utm-result', 'Resultatet er uden for gyldigt interval — tjek zone og halvkugle.');
 
     document.getElementById('utm-result').innerHTML = makeResults([
-      { label: 'Latitude (DD)',  val: lat.toFixed(8) },
-      { label: 'Longitude (DD)', val: lon.toFixed(8) },
-      { label: 'Lat DMS',  val: ddToDms(lat, true) },
-      { label: 'Lon DMS',  val: ddToDms(lon, false) },
-      { label: 'Lat DDM',  val: ddToDdm(lat, true) },
-      { label: 'Lon DDM',  val: ddToDdm(lon, false) },
-      { label: 'Google Maps Link', val: `${lat.toFixed(6)},${lon.toFixed(6)}` },
+      { label: 'Breddegrad (DD)',  val: lat.toFixed(8) },
+      { label: 'Længdegrad (DD)', val: lon.toFixed(8) },
+      { label: 'Bredd. DMS',      val: ddToDms(lat, true) },
+      { label: 'Læng. DMS',       val: ddToDms(lon, false) },
+      { label: 'Bredd. DDM',      val: ddToDdm(lat, true) },
+      { label: 'Læng. DDM',       val: ddToDdm(lon, false) },
+      { label: 'Google Maps',      val: `${lat.toFixed(6)},${lon.toFixed(6)}` },
     ]);
   } catch(e) {
-    showError('utm-result', 'Conversion failed: ' + e.message);
+    showError('utm-result', 'Konvertering mislykkedes: ' + e.message);
   }
 }
 
@@ -778,38 +839,38 @@ function updateZoneHint() {
   if (!isNaN(lat) && !isNaN(lon) && lat >= -80 && lat <= 84 && lon >= -180 && lon <= 180) {
     const zone = Math.floor((lon + 180) / 6) + 1;
     const hemi = lat >= 0 ? 'N' : 'S';
-    hint.textContent = `→ Auto-detected Zone: ${zone}${hemi}`;
+    hint.textContent = `→ Automatisk registreret zone: ${zone}${hemi}`;
   } else {
-    hint.textContent = 'Enter coordinates to auto-detect UTM zone.';
+    hint.textContent = 'Angiv koordinater for at finde UTM-zone automatisk.';
   }
 }
 
 function gpsToUtm() {
   const lat = parseFloat(document.getElementById('gps-lat').value);
   const lon = parseFloat(document.getElementById('gps-lon').value);
-  if (isNaN(lat) || isNaN(lon)) return showError('gps-result', 'Enter valid Latitude and Longitude.');
-  if (lat < -80 || lat > 84) return showError('gps-result', 'UTM is only defined for latitudes −80° to +84°. Use UPS for polar regions.');
-  if (lon < -180 || lon > 180) return showError('gps-result', 'Longitude must be −180 to 180.');
+  if (isNaN(lat) || isNaN(lon)) return showError('gps-result', 'Angiv gyldige breddegrads- og længdegradsværdier.');
+  if (lat < -80 || lat > 84) return showError('gps-result', 'UTM er kun defineret for breddegrader fra −80° til +84°. Brug UPS for polarområder.');
+  if (lon < -180 || lon > 180) return showError('gps-result', 'Længdegrad skal ligge mellem −180 og 180.');
 
   try {
     const { zone, hemisphere, easting, northing } = latLonToUtm(lat, lon);
     document.getElementById('gps-result').innerHTML = makeResults([
-      { label: 'UTM Zone',  val: `${zone}${hemisphere}` },
-      { label: 'Easting',   val: easting.toFixed(3) + ' m' },
-      { label: 'Northing',  val: northing.toFixed(3) + ' m' },
-      { label: 'Full UTM',  val: `${zone}${hemisphere} ${easting.toFixed(1)}E ${northing.toFixed(1)}N` },
-      { label: 'Lat DMS',   val: ddToDms(lat, true) },
-      { label: 'Lon DMS',   val: ddToDms(lon, false) },
+      { label: 'UTM-zone',   val: `${zone}${hemisphere}` },
+      { label: 'Easting',    val: easting.toFixed(3) + ' m' },
+      { label: 'Northing',   val: northing.toFixed(3) + ' m' },
+      { label: 'Fuld UTM',   val: `${zone}${hemisphere} ${easting.toFixed(1)}E ${northing.toFixed(1)}N` },
+      { label: 'Bredd. DMS', val: ddToDms(lat, true) },
+      { label: 'Læng. DMS',  val: ddToDms(lon, false) },
     ]);
   } catch(e) {
-    showError('gps-result', 'Conversion failed: ' + e.message);
+    showError('gps-result', 'Konvertering mislykkedes: ' + e.message);
   }
 }
 
 function clearGps() {
   ['gps-lat','gps-lon'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('gps-result').innerHTML = '';
-  document.getElementById('zone-hint').textContent = 'Enter coordinates to auto-detect UTM zone.';
+  document.getElementById('zone-hint').textContent = 'Angiv koordinater for at finde UTM-zone automatisk.';
 }
 
 // ──────────────────────────────────────────────
@@ -820,28 +881,28 @@ function convertGis() {
 
   // Split on any whitespace, semicolon, comma, or tab
   const parts = raw.split(/[\s;,\t]+/).map(s => parseFloat(s.replace(/,/g,'.'))).filter(n => !isNaN(n));
-  if (parts.length < 2) return showError('gis-result', 'Paste two numbers — Northing and Easting.');
+  if (parts.length < 2) return showError('gis-result', 'Indsæt to tal — Northing og Easting.');
 
   // Auto-detect which is northing (~6M) and which is easting (~700k)
   let N, E;
   if (parts[0] > parts[1]) { N = parts[0]; E = parts[1]; }
   else                      { N = parts[1]; E = parts[0]; }
 
-  if (N < 5900000 || N > 6700000) return showError('gis-result', `Northing ${N.toFixed(0)} looks wrong — expected ~6 000 000–6 600 000 for Denmark.`);
-  if (E < 300000  || E > 1000000) return showError('gis-result', `Easting ${E.toFixed(0)} looks wrong — expected ~400 000–900 000 for Denmark.`);
+  if (N < 6040000 || N > 6240000) return showError('gis-result', `Northing ${N.toFixed(0)} ser forkert ud — forventet ca. 6.040.000–6.240.000 for Sjælland/Lolland/Falster/Møn.`);
+  if (E < 440000  || E > 760000)  return showError('gis-result', `Easting ${E.toFixed(0)} ser forkert ud — forventet ca. 440.000–760.000 for Sjælland/Lolland/Falster/Møn.`);
 
   try {
     const r = dkAutoConvert(E, N);
     document.getElementById('gis-result').innerHTML = makeResults([
-      { label: 'Latitude',      val: r.lat.toFixed(6) },
-      { label: 'Longitude',     val: r.lon.toFixed(6) },
-      { label: 'Lat · Lon',     val: `${r.lat.toFixed(6)}, ${r.lon.toFixed(6)}` },
-      { label: 'Lat DMS',       val: ddToDms(r.lat, true) },
-      { label: 'Lon DMS',       val: ddToDms(r.lon, false) },
-      { label: 'Zone detected', val: `UTM ${r.zone}N (ETRS89)` },
+      { label: 'Breddegrad',       val: r.lat.toFixed(6) },
+      { label: 'Længdegrad',       val: r.lon.toFixed(6) },
+      { label: 'Bredd · Læng',     val: `${r.lat.toFixed(6)}, ${r.lon.toFixed(6)}` },
+      { label: 'Bredd. DMS',       val: ddToDms(r.lat, true) },
+      { label: 'Læng. DMS',        val: ddToDms(r.lon, false) },
+      { label: 'Registreret zone', val: `UTM ${r.zone}N (ETRS89)` },
     ]);
   } catch(e) {
-    showError('gis-result', 'Conversion failed: ' + e.message);
+    showError('gis-result', 'Konvertering mislykkedes: ' + e.message);
   }
 }
 
@@ -855,9 +916,9 @@ function clearGis() {
 function convertFormats() {
   const lat = parseFloat(document.getElementById('fmt-lat').value);
   const lon = parseFloat(document.getElementById('fmt-lon').value);
-  if (isNaN(lat) || isNaN(lon)) return showError('fmt-result', 'Enter valid Latitude and Longitude in Decimal Degrees.');
-  if (lat < -90 || lat > 90) return showError('fmt-result', 'Latitude must be −90 to 90.');
-  if (lon < -180 || lon > 180) return showError('fmt-result', 'Longitude must be −180 to 180.');
+  if (isNaN(lat) || isNaN(lon)) return showError('fmt-result', 'Angiv gyldige koordinater i decimalgrader.');
+  if (lat < -90 || lat > 90) return showError('fmt-result', 'Breddegrad skal ligge mellem −90 og 90.');
+  if (lon < -180 || lon > 180) return showError('fmt-result', 'Længdegrad skal ligge mellem −180 og 180.');
 
   let utmStr = '—';
   try {
@@ -868,14 +929,14 @@ function convertFormats() {
   } catch(_) {}
 
   document.getElementById('fmt-result').innerHTML = makeResults([
-    { label: 'Decimal Degrees (DD)', val: `${lat.toFixed(8)}, ${lon.toFixed(8)}` },
-    { label: 'Lat DMS', val: ddToDms(lat, true) },
-    { label: 'Lon DMS', val: ddToDms(lon, false) },
-    { label: 'Lat DDM', val: ddToDdm(lat, true) },
-    { label: 'Lon DDM', val: ddToDdm(lon, false) },
-    { label: 'UTM',     val: utmStr },
-    { label: 'Google Maps', val: `${lat.toFixed(6)},${lon.toFixed(6)}` },
-    { label: 'ISO 6709', val: `${lat >= 0 ? '+' : ''}${lat.toFixed(6)}${lon >= 0 ? '+' : ''}${lon.toFixed(6)}/` },
+    { label: 'Decimalgrader (DD)', val: `${lat.toFixed(8)}, ${lon.toFixed(8)}` },
+    { label: 'Bredd. DMS',         val: ddToDms(lat, true) },
+    { label: 'Læng. DMS',          val: ddToDms(lon, false) },
+    { label: 'Bredd. DDM',         val: ddToDdm(lat, true) },
+    { label: 'Læng. DDM',          val: ddToDdm(lon, false) },
+    { label: 'UTM',                 val: utmStr },
+    { label: 'Google Maps',         val: `${lat.toFixed(6)},${lon.toFixed(6)}` },
+    { label: 'ISO 6709',            val: `${lat >= 0 ? '+' : ''}${lat.toFixed(6)}${lon >= 0 ? '+' : ''}${lon.toFixed(6)}/` },
   ]);
 }
 
@@ -903,16 +964,16 @@ function parseDms() {
   if (lon === null) lon = parseDmsStr(document.getElementById('dms-lon-input').value);
 
   if (lat === null || lon === null || isNaN(lat) || isNaN(lon))
-    return showError('dms-result', 'Could not parse the coordinate strings. Try format: 41 59 53.6 N');
+    return showError('dms-result', 'Kunne ikke afkode koordinaterne. Prøv formatet: 41 59 53.6 N');
 
   document.getElementById('dms-result').innerHTML = makeResults([
-    { label: 'Latitude DD',  val: lat.toFixed(8) },
-    { label: 'Longitude DD', val: lon.toFixed(8) },
-    { label: 'Lat DMS',  val: ddToDms(lat, true) },
-    { label: 'Lon DMS',  val: ddToDms(lon, false) },
-    { label: 'Lat DDM',  val: ddToDdm(lat, true) },
-    { label: 'Lon DDM',  val: ddToDdm(lon, false) },
-    { label: 'Google Maps', val: `${lat.toFixed(6)},${lon.toFixed(6)}` },
+    { label: 'Breddegrad DD',  val: lat.toFixed(8) },
+    { label: 'Længdegrad DD',  val: lon.toFixed(8) },
+    { label: 'Bredd. DMS',    val: ddToDms(lat, true) },
+    { label: 'Læng. DMS',     val: ddToDms(lon, false) },
+    { label: 'Bredd. DDM',    val: ddToDdm(lat, true) },
+    { label: 'Læng. DDM',     val: ddToDdm(lon, false) },
+    { label: 'Google Maps',    val: `${lat.toFixed(6)},${lon.toFixed(6)}` },
   ]);
 }
 
@@ -963,8 +1024,8 @@ function tmToLatLon(cm_deg, scale, fe, fn, easting, northing) {
 }
 
 // Projection presets
-// Zealand + surrounding islands bounding box
-const DK_BBOX = { minLat:54.9, maxLat:56.2, minLon:10.8, maxLon:12.8 };
+// Sjælland, Lolland, Falster og Møn
+const DK_BBOX = { minLat:54.5, maxLat:56.2, minLon:10.6, maxLon:12.7 };
 
 function inDenmark(lat, lon) {
   return lat >= DK_BBOX.minLat && lat <= DK_BBOX.maxLat
@@ -1070,7 +1131,7 @@ const OUT_HEADERS = ['Linje', 'StopNr', 'StopNavn', 'VejNavn', 'latitude', 'long
 
 function parseCsvContent(text) {
   const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l => l.trim());
-  if (lines.length < 1) { alert('File appears to be empty.'); return; }
+  if (lines.length < 1) { alert('Filen ser ud til at være tom.'); return; }
 
   csvDelim = detectDelimiter(lines[0]);
 
@@ -1079,7 +1140,7 @@ function parseCsvContent(text) {
   const looksLikeData = !isNaN(parseFloat((firstRow[COL_NORTH]||'').replace(/,/g,'')));
   csvData = (looksLikeData ? lines : lines.slice(1)).filter(l => l.trim()).map(l => splitRow(l, csvDelim));
 
-  if (!csvData.length) { alert('No data rows found.'); return; }
+  if (!csvData.length) { alert('Ingen datarækker fundet.'); return; }
 
   document.getElementById('step1-card').style.display = 'none';
   document.getElementById('step3-card').style.display = 'none';
@@ -1093,18 +1154,18 @@ function runCsvBatch() {
   csvData.forEach((row, i) => {
     const N = parseFloat((row[COL_NORTH] || '').toString().replace(/,/g,''));
     const E = parseFloat((row[COL_EAST]  || '').toString().replace(/,/g,''));
-    if (isNaN(E) || isNaN(N)) { errors.push(`Row ${i+1}: columns E/F not numeric (got "${row[COL_NORTH]}", "${row[COL_EAST]}")`); return; }
+    if (isNaN(E) || isNaN(N)) { errors.push(`Række ${i+1}: kolonne E/F er ikke tal (fik "${row[COL_NORTH]}", "${row[COL_EAST]}")`); return; }
 
     try {
       const r = dkAutoConvert(E, N);
-      if (r.outsideDK) errors.push(`Row ${i+1}: result outside Zealand bbox (${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}) — verify manually`);
-      if (r.lat < -90 || r.lat > 90 || r.lon < -180 || r.lon > 180) throw new Error('result out of range');
+      if (r.outsideDK) errors.push(`Række ${i+1}: resultatet ligger uden for Sjælland/Lolland/Falster/Møn (${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}) — verificér manuelt`);
+      if (r.lat < -90 || r.lat > 90 || r.lon < -180 || r.lon > 180) throw new Error('koordinat er uden for gyldigt interval');
       results.push({ lat: r.lat, lon: r.lon, _orig: row });
     } catch(e) { errors.push(`Row ${i+1}: ${e.message}`); }
   });
 
   _csvResults = results;
-  document.getElementById('s3-filename').textContent = `${csvFilename}  ·  ${results.length} stops`;
+  document.getElementById('s3-filename').textContent = `${csvFilename}  ·  ${results.length} stop`;
   document.getElementById('step3-card').style.display = 'block';
 
   // Summary
@@ -1159,6 +1220,23 @@ function resetCsv() {
   document.getElementById('step1-card').style.display = 'block';
   document.getElementById('step3-card').style.display = 'none';
   dzLeave({});
+}
+
+// ──────────────────────────────────────────────
+// Eksempel-CSV download
+function downloadExampleCsv() {
+  const rows = [
+    '"Linje";"StopNr";"StopNavn";"VejNavn";"Northing";"Easting"',
+    '"1A";"12345";"Rådhuspladsen";"Rådhuspladsen";"6172229.63";"717965.34"',
+    '"1A";"12346";"Vesterport St.";"Vesterbrogade";"6172450.12";"718230.45"',
+    '"2A";"22001";"Nørreport St.";"Nørre Voldgade";"6174100.88";"720015.77"',
+    '"2A";"22002";"Trianglen";"Østerbrogade";"6175320.55";"722840.10"',
+  ].join('\n');
+  const blob = new Blob(['\uFEFF' + rows], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'eksempel_gis_stoppesteddata.csv'; a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ──────────────────────────────────────────────
