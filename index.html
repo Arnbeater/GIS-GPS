@@ -1229,6 +1229,25 @@ function resetCsv() {
 }
 
 // ──────────────────────────────────────────────
+// Sorter stop geografisk via nearest-neighbor
+// (bruges når CSV-rækkefølgen ikke svarer til ruterækkefølgen)
+function sortStopsByNearestNeighbor(stops) {
+  if (stops.length <= 2) return stops;
+  const unvisited = [...stops];
+  const sorted = [unvisited.shift()];
+  while (unvisited.length > 0) {
+    const last = sorted[sorted.length - 1];
+    let bestIdx = 0, bestDist = Infinity;
+    unvisited.forEach((s, i) => {
+      const d = (s.lat - last.lat) ** 2 + (s.lon - last.lon) ** 2;
+      if (d < bestDist) { bestDist = d; bestIdx = i; }
+    });
+    sorted.push(unvisited.splice(bestIdx, 1)[0]);
+  }
+  return sorted;
+}
+
+// ──────────────────────────────────────────────
 // Leaflet kort
 let routeMap = null;
 
@@ -1270,8 +1289,9 @@ function initRouteMap() {
     bounds.push([s.lat, s.lon]);
   });
 
-  // Tegn busruten som linje gennem stoppositionerne i rækkefølge
-  L.polyline(bounds, {
+  // Sorter stop geografisk og tegn rutelinje
+  const sortedStops = sortStopsByNearestNeighbor(routeStops);
+  L.polyline(sortedStops.map(s => [s.lat, s.lon]), {
     color: '#6366f1', weight: 4, opacity: 0.85,
   }).addTo(routeMap);
 
