@@ -3567,7 +3567,9 @@ function buildCsvResultsString() {
   const header = outHeaders.map(h => `"${h}"`).join(';');
   const rows = _csvResults.map(r => {
     const orig = keepCols.map(i => `"${String(r._orig[i]||'').replace(/"/g,'""')}"`);
-    return [...orig, r.lat.toFixed(6), r.lon.toFixed(6)].join(';');
+    const lat = r.lat.toFixed(6).replace('.', ',');
+    const lon = r.lon.toFixed(6).replace('.', ',');
+    return [...orig, lat, lon].join(';');
   });
   return [header, ...rows].join('\n');
 }
