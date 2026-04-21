@@ -3369,7 +3369,15 @@ function dkAutoConvert(E, N) {
 // CSV batch state
 let csvData = [], csvFilename = '', csvDelim = ',';
 let _csvResults = [];
-let csvFormat = 'old'; // 'old' | 'udstyr'
+let csvFormat = 'old'; // 'old' | 'retning' | 'udstyr'
+
+// Format: retning (A=Linje, B=Retning, C=StopNr, D=StopNavn, E=VejNavn, F=NordSyd, G=ØstVest)
+const RETNING_COL_NORTH = 5;
+const RETNING_COL_EAST  = 6;
+const RETNING_COL_KEEP  = [0, 1, 2, 3, 4];
+const RETNING_TABLE_COLS = [0, 1, 2, 3];
+const RETNING_TABLE_HDRS = ['Linje', 'Retning', 'StopNr', 'StopNavn'];
+const RETNING_OUT_HEADERS = ['Linje', 'Retning', 'StopNr', 'StopNavn', 'VejNavn', 'latitude', 'longitude'];
 
 // Format: Stoppestedsudstyr (M=Latitude=Easting, N=Longitude=Northing)
 const UDSTYR_COL_EAST  = 12;
@@ -3399,10 +3407,9 @@ function parseDKGisCoord(str, isNorthing) {
 }
 
 function detectCsvFormat(headerRow) {
-  const h0  = (headerRow[0]  || '').toLowerCase().trim();
-  const h12 = (headerRow[12] || '').toLowerCase().trim();
-  const h13 = (headerRow[13] || '').toLowerCase().trim();
-  if (h0 === 'stoppestedsnummer' && h12 === 'latitude' && h13 === 'longitude') return 'udstyr';
+  const h  = i => (headerRow[i] || '').toLowerCase().trim();
+  if (h(0) === 'stoppestedsnummer' && h(12) === 'latitude' && h(13) === 'longitude') return 'udstyr';
+  if (h(1) === 'retning' && (h(5).includes('nord') || h(5).includes('north'))) return 'retning';
   return 'old';
 }
 
@@ -3514,8 +3521,9 @@ function parseCsvContent(text) {
 function runCsvBatch() {
   const results = [], errors = [];
   const isUdstyr = csvFormat === 'udstyr';
-  const colE = isUdstyr ? UDSTYR_COL_EAST  : COL_EAST;
-  const colN = isUdstyr ? UDSTYR_COL_NORTH : COL_NORTH;
+  const isRetning = csvFormat === 'retning';
+  const colE = isUdstyr ? UDSTYR_COL_EAST  : isRetning ? RETNING_COL_EAST  : COL_EAST;
+  const colN = isUdstyr ? UDSTYR_COL_NORTH : isRetning ? RETNING_COL_NORTH : COL_NORTH;
 
   csvData.forEach((row, i) => {
     let E, N;
@@ -3545,8 +3553,8 @@ function runCsvBatch() {
   const errDetail = errors.length ? `<details><summary style="color:var(--red-text);font-size:0.8rem;cursor:pointer">Vis fejl</summary><div style="margin-top:8px">${errors.map(e=>`<div class="error">⚠ ${escHtml(e)}</div>`).join('')}</div></details>` : '';
   document.getElementById('convert-summary').innerHTML = `<div class="summary-row"><div class="summary-big">${results.length}</div><div class="summary-label">stop konverteret (${okPct}%)</div>${errHtml}</div>${errDetail}`;
 
-  const tableCols = isUdstyr ? UDSTYR_TABLE_COLS : COL_KEEP;
-  const tableHdrs = isUdstyr ? UDSTYR_TABLE_HDRS : ['Linje','StopNr','StopNavn','VejNavn'];
+  const tableCols = isUdstyr ? UDSTYR_TABLE_COLS : isRetning ? RETNING_TABLE_COLS : COL_KEEP;
+  const tableHdrs = isUdstyr ? UDSTYR_TABLE_HDRS : isRetning ? RETNING_TABLE_HDRS : ['Linje','StopNr','StopNavn','VejNavn'];
   let tbl = `<table class="data-table"><thead><tr><th>#</th>`;
   tableHdrs.forEach(h => tbl += `<th>${escHtml(h)}</th>`);
   tbl += `<th style="color:var(--green)">latitude</th><th style="color:var(--green)">longitude</th></tr></thead><tbody>`;
@@ -3561,9 +3569,10 @@ function runCsvBatch() {
 
 function buildCsvResultsString() {
   if (!_csvResults.length) return '';
-  const isUdstyr = csvFormat === 'udstyr';
-  const keepCols = isUdstyr ? UDSTYR_COL_KEEP : COL_KEEP;
-  const outHeaders = isUdstyr ? UDSTYR_OUT_HEADERS : OUT_HEADERS;
+  const isUdstyr  = csvFormat === 'udstyr';
+  const isRetning = csvFormat === 'retning';
+  const keepCols   = isUdstyr ? UDSTYR_COL_KEEP  : isRetning ? RETNING_COL_KEEP  : COL_KEEP;
+  const outHeaders = isUdstyr ? UDSTYR_OUT_HEADERS : isRetning ? RETNING_OUT_HEADERS : OUT_HEADERS;
   const header = outHeaders.map(h => `"${h}"`).join(';');
   const rows = _csvResults.map(r => {
     const orig = keepCols.map(i => `"${String(r._orig[i]||'').replace(/"/g,'""')}"`);
