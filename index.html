@@ -3537,6 +3537,12 @@ function runCsvBatch() {
     }
     if (isNaN(E) || isNaN(N)) { errors.push(`Række ${i+1}: koordinater er ikke tal (fik "${row[colE]}", "${row[colN]}")`); return; }
 
+    // GPS-koordinater allerede (NordSyd ≈ 54-59°N, ØstVest ≈ 6-17°E) — skip UTM-konvertering
+    if (!isUdstyr && N >= 53 && N <= 60 && E >= 5 && E <= 18) {
+      results.push({ lat: N, lon: E, _orig: row });
+      return;
+    }
+
     try {
       const r = dkAutoConvert(E, N);
       if (r.outsideDK) errors.push(`Række ${i+1}: resultatet ligger uden for Sjælland/Lolland/Falster/Møn (${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}) — verificér manuelt`);
