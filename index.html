@@ -3457,14 +3457,15 @@ function processFile(file) {
   csvFilename = file.name;
   const reader = new FileReader();
   reader.onload = ev => {
-    const bytes = new Uint8Array(ev.target.result);
     let text;
-    if (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
-      text = new TextDecoder('utf-8').decode(ev.target.result.slice(3)); // UTF-8 BOM
-    } else {
-      // Detect UTF-8 multibyte sequences (Danish chars: æøå = C3 A6/B8/A5)
-      const hasUtf8 = bytes.some((b, i) => b === 0xC3 && i + 1 < bytes.length && (bytes[i+1] & 0xC0) === 0x80);
-      text = hasUtf8 ? new TextDecoder('utf-8').decode(ev.target.result) : decodeCp865(ev.target.result);
+    try {
+      // Try UTF-8 strict — throws on invalid sequences (CP-865 files will fail)
+      text = new TextDecoder('utf-8', { fatal: true }).decode(ev.target.result);
+      // Strip BOM (U+FEFF) if present
+      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+    } catch {
+      // Fall back to CP-865 (old DOS-encoded GIS files)
+      text = decodeCp865(ev.target.result);
     }
     parseCsvContent(text);
   };
