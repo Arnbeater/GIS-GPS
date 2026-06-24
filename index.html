@@ -3459,13 +3459,17 @@ function processFile(file) {
   reader.onload = ev => {
     let text;
     try {
-      // Try UTF-8 strict — throws on invalid sequences (CP-865 files will fail)
+      // Try UTF-8 strict — throws on invalid byte sequences
       text = new TextDecoder('utf-8', { fatal: true }).decode(ev.target.result);
-      // Strip BOM (U+FEFF) if present
-      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1); // strip BOM
     } catch {
-      // Fall back to CP-865 (old DOS-encoded GIS files)
-      text = decodeCp865(ev.target.result);
+      // Not UTF-8. Distinguish CP-865 (old DOS) from Windows-1252 (modern):
+      // CP-865 puts Danish chars (æøå) in 0x80–0x9F range; Windows-1252 puts them in 0xC0–0xFF.
+      const bytes = new Uint8Array(ev.target.result);
+      const hasCp865Range = bytes.some(b => b >= 0x80 && b <= 0x9F);
+      text = hasCp865Range
+        ? decodeCp865(ev.target.result)
+        : new TextDecoder('windows-1252').decode(ev.target.result);
     }
     parseCsvContent(text);
   };
